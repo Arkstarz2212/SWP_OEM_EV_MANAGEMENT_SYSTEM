@@ -9,10 +9,12 @@ import org.example.models.dto.response.ApiErrorResponse;
 import org.example.models.dto.response.UserResponse;
 import org.example.models.enums.UserRole;
 import org.example.service.IService.IAuthenticationService;
+import org.example.service.IService.IJwtService;
 import org.example.service.IService.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,6 +48,9 @@ public class UsersController {
     @Autowired
     private IAuthenticationService authenticationService;
 
+    @Autowired
+    private IJwtService jwtService;
+
     @PostMapping
     @Operation(summary = "Create New User", description = "Create a new user account with specified role and profile information. Required fields: email, password, fullName, role. Optional: serviceCenterId, phone, address, mfaEnabled.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "User creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create User Example", value = "{\"email\": \"user@example.com\", \"password\": \"password123\", \"fullName\": \"John Doe\", \"role\": \"SC_Staff\", \"serviceCenterId\": 1, \"phone\": \"+1234567890\", \"address\": \"123 Main St\", \"mfaEnabled\": false}"))))
     @ApiResponses(value = {
@@ -66,17 +71,26 @@ public class UsersController {
                         ApiErrorResponse.unauthorized("Missing or invalid Authorization header", getCurrentPath()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
-            Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null) {
+
+            // Use JWT service to validate token instead of session-based auth
+            Map<String, Object> tokenClaims = jwtService.validateToken(token);
+            if (tokenClaims == null || !"access".equals(tokenClaims.get("type"))) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", getCurrentPath()));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired token", getCurrentPath()));
             }
-            Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole)) {
+
+            String roleStr = (String) tokenClaims.get("role");
+            if (roleStr == null) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(ApiErrorResponse.forbidden("Insufficient permissions", getCurrentPath()));
             }
-            UserRole currentRole = (UserRole) roleObj;
+
+            UserRole currentRole = parseUserRole(roleStr);
+            if (currentRole == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiErrorResponse.forbidden("Invalid user role", getCurrentPath()));
+            }
+
             if (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff
                     && currentRole != UserRole.SC_Staff) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiErrorResponse
@@ -93,7 +107,7 @@ public class UsersController {
             String password = body.get("password") != null ? String.valueOf(body.get("password")) : null;
             String fullName = body.get("fullName") != null ? String.valueOf(body.get("fullName")).trim()
                     : body.get("username") != null ? String.valueOf(body.get("username")).trim() : null;
-            String roleStr = body.get("role") != null ? String.valueOf(body.get("role")) : null;
+            String requestRoleStr = body.get("role") != null ? String.valueOf(body.get("role")) : null;
 
             if (email == null || email.isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(
@@ -111,7 +125,7 @@ public class UsersController {
                 return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(
                         "Full name is required", getCurrentPath()));
             }
-            if (roleStr == null || roleStr.isEmpty()) {
+            if (requestRoleStr == null || requestRoleStr.isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(
                         "Role is required", getCurrentPath()));
             }
@@ -121,7 +135,7 @@ public class UsersController {
             req.setPassword(password);
             req.setFullName(fullName);
 
-            UserRole parsedRole = parseUserRole(roleStr);
+            UserRole parsedRole = parseUserRole(requestRoleStr);
             if (parsedRole == null) {
                 return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(
                         "Invalid role. Valid roles are: Admin, EVM_Staff, SC_Staff, SC_Technician", getCurrentPath()));
@@ -147,7 +161,19 @@ public class UsersController {
                 req.setMfaEnabled(Boolean.valueOf(body.get("mfaEnabled").toString()));
             }
 
-            UserResponse res = userService.createAdminUser(req);
+            // Validate serviceCenterId for SC roles
+            if ((parsedRole == UserRole.SC_Staff || parsedRole == UserRole.SC_Technician)
+                    && req.getServiceCenterId() == null) {
+                return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(
+                        "serviceCenterId is required for " + parsedRole.name(), getCurrentPath()));
+            }
+
+            UserResponse res = switch (parsedRole) {
+                case Admin -> userService.createAdminUser(req);
+                case EVM_Staff -> userService.createEvmStaff(req, null);
+                case SC_Staff -> userService.createScStaff(req, req.getServiceCenterId());
+                case SC_Technician -> userService.createScTechnician(req, req.getServiceCenterId());
+            };
             return ResponseEntity.status(HttpStatus.CREATED).body(res);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(
@@ -329,6 +355,83 @@ public class UsersController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     ApiErrorResponse.internalServerError("Failed to update role: " + e.getMessage(), getCurrentPath()));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete User", description = "Delete a user by their ID. This action cannot be undone.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User deleted successfully", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid user ID", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> deleteUser(@PathVariable("id") Long id) {
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(
+                        "Invalid user ID", getCurrentPath()));
+            }
+
+            boolean deleted = userService.deleteUser(id);
+            if (deleted) {
+                return ResponseEntity.ok(Map.of("success", true, "message", "User deleted successfully"));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        ApiErrorResponse.notFound("User not found", getCurrentPath()));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    ApiErrorResponse.internalServerError("Failed to delete user: " + e.getMessage(), getCurrentPath()));
+        }
+    }
+
+    @PutMapping("/{id}/status")
+    @Operation(summary = "Update User Status", description = "Update the active status of a user (activate/deactivate).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User status updated successfully", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> updateUserStatus(@PathVariable("id") Long id, @RequestParam("active") boolean active) {
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(
+                        "Invalid user ID", getCurrentPath()));
+            }
+
+            boolean updated = userService.updateUserStatus(id, active);
+            if (updated) {
+                String status = active ? "activated" : "deactivated";
+                return ResponseEntity.ok(Map.of("success", true, "message", "User " + status + " successfully"));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        ApiErrorResponse.notFound("User not found", getCurrentPath()));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    ApiErrorResponse.internalServerError("Failed to update user status: " + e.getMessage(),
+                            getCurrentPath()));
+        }
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Get All Users", description = "Retrieve all users with pagination support.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Users retrieved successfully", content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid parameters", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> getAllUsers(@RequestParam(value = "limit", defaultValue = "20") String limit,
+            @RequestParam(value = "offset", defaultValue = "0") String offset) {
+        try {
+            List<UserResponse> users = userService.getAllUsers(Integer.parseInt(limit), Integer.parseInt(offset));
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    ApiErrorResponse.internalServerError("Failed to retrieve users: " + e.getMessage(),
+                            getCurrentPath()));
         }
     }
 

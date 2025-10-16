@@ -6,10 +6,13 @@ import java.util.Map;
 import org.example.models.dto.request.LoginRequest;
 import org.example.models.dto.request.PasswordResetRequest;
 import org.example.models.dto.response.LoginResponse;
+import org.springframework.security.core.Authentication;
 
 public interface IAuthenticationService {
     // Authentication Operations
     LoginResponse login(LoginRequest request);
+
+    LoginResponse getCurrentUserInfo(Authentication authentication);
 
     boolean logout(Long userId, String sessionId);
 

@@ -14,6 +14,7 @@ public class WarrantyClaim {
     private String issue_description; // aoem.warranty_claims.issue_description
     private String dtc_code; // aoem.warranty_claims.dtc_code
     private Integer mileage_km_at_claim; // aoem.warranty_claims.mileage_km_at_claim
+    private OffsetDateTime created_at; // aoem.warranty_claims.created_at
     private OffsetDateTime submitted_at; // aoem.warranty_claims.submitted_at
     private OffsetDateTime approved_at; // aoem.warranty_claims.approved_at
 
@@ -106,6 +107,14 @@ public class WarrantyClaim {
 
     public void setMileage_km_at_claim(Integer mileage_km_at_claim) {
         this.mileage_km_at_claim = mileage_km_at_claim;
+    }
+
+    public OffsetDateTime getCreated_at() {
+        return created_at;
+    }
+
+    public void setCreated_at(OffsetDateTime created_at) {
+        this.created_at = created_at;
     }
 
     public OffsetDateTime getSubmitted_at() {

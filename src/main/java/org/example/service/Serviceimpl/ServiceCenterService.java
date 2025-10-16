@@ -34,6 +34,9 @@ public class ServiceCenterService implements IServiceCenterService {
         serviceCenter.setCode(request.getCode());
         serviceCenter.setName(request.getName());
         serviceCenter.setRegion(request.getRegion());
+        serviceCenter.setOemId(request.getOemId());
+        serviceCenter.setActive(request.getActive() != null ? request.getActive() : Boolean.TRUE);
+        serviceCenter.setStatus(request.getStatus() != null ? request.getStatus() : "ACTIVE");
 
         // Set contact_info JSON string
         org.example.models.json.ContactInfo contactInfo = new org.example.models.json.ContactInfo();
@@ -70,6 +73,15 @@ public class ServiceCenterService implements IServiceCenterService {
         }
         if (request.getRegion() != null) {
             serviceCenter.setRegion(request.getRegion());
+        }
+        if (request.getOemId() != null) {
+            serviceCenter.setOemId(request.getOemId());
+        }
+        if (request.getActive() != null) {
+            serviceCenter.setActive(request.getActive());
+        }
+        if (request.getStatus() != null) {
+            serviceCenter.setStatus(request.getStatus());
         }
 
         // Update contact_info JSON string
@@ -134,13 +146,25 @@ public class ServiceCenterService implements IServiceCenterService {
     @Override
     public boolean activateServiceCenter(Long serviceCenterId) {
         Optional<ServiceCenter> serviceCenterOpt = serviceCenterRepository.findById(serviceCenterId);
-        return serviceCenterOpt.isPresent();
+        if (serviceCenterOpt.isEmpty())
+            return false;
+        ServiceCenter sc = serviceCenterOpt.get();
+        sc.setActive(true);
+        sc.setStatus("ACTIVE");
+        serviceCenterRepository.save(sc);
+        return true;
     }
 
     @Override
     public boolean deactivateServiceCenter(Long serviceCenterId, String reason) {
         Optional<ServiceCenter> serviceCenterOpt = serviceCenterRepository.findById(serviceCenterId);
-        return serviceCenterOpt.isPresent();
+        if (serviceCenterOpt.isEmpty())
+            return false;
+        ServiceCenter sc = serviceCenterOpt.get();
+        sc.setActive(false);
+        sc.setStatus("INACTIVE");
+        serviceCenterRepository.save(sc);
+        return true;
     }
 
     @Override
@@ -158,8 +182,10 @@ public class ServiceCenterService implements IServiceCenterService {
 
     @Override
     public List<ServiceCenterResponse> getServiceCentersByOem(Long oemId) {
-        // TODO: Implement OEM-based service center lookup
-        return new ArrayList<>();
+        List<ServiceCenter> serviceCenters = serviceCenterRepository.findByOemId(oemId);
+        return serviceCenters.stream()
+                .map(this::convertToServiceCenterResponse)
+                .toList();
     }
 
     @Override
@@ -444,6 +470,9 @@ public class ServiceCenterService implements IServiceCenterService {
         response.setCode(serviceCenter.getCode());
         response.setName(serviceCenter.getName());
         response.setRegion(serviceCenter.getRegion());
+        response.setOemId(serviceCenter.getOemId());
+        response.setActive(serviceCenter.getActive());
+        response.setStatus(serviceCenter.getStatus());
 
         // contact_info JSON -> Map
         try {
@@ -458,5 +487,45 @@ public class ServiceCenterService implements IServiceCenterService {
         }
 
         return response;
+    }
+
+    @Override
+    public boolean deleteServiceCenter(Long serviceCenterId) {
+        try {
+            Optional<ServiceCenter> serviceCenterOpt = serviceCenterRepository.findById(serviceCenterId);
+            if (serviceCenterOpt.isPresent()) {
+                serviceCenterRepository.deleteById(serviceCenterId);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean updateServiceCenterStatus(Long serviceCenterId, boolean active) {
+        try {
+            if (active) {
+                return activateServiceCenter(serviceCenterId);
+            } else {
+                return deactivateServiceCenter(serviceCenterId, "Status updated via API");
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public List<ServiceCenterResponse> getAllServiceCenters(int limit, int offset) {
+        try {
+            return serviceCenterRepository.findAll().stream()
+                    .skip(offset)
+                    .limit(limit)
+                    .map(this::convertToServiceCenterResponse)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 }

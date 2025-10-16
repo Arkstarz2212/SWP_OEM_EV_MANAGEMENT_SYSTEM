@@ -2,10 +2,10 @@ package org.example.service.IService;
 
 import java.util.List;
 
+import org.example.models.dto.request.CreateUserRequest;
 import org.example.models.dto.request.PasswordChangeRequest;
 import org.example.models.dto.request.PasswordResetRequest;
 import org.example.models.dto.request.ProfileUpdateRequest;
-import org.example.models.dto.request.CreateUserRequest;
 import org.example.models.dto.response.UserResponse;
 import org.example.models.enums.UserRole;
 
@@ -26,6 +26,12 @@ public interface IUserService {
     boolean deactivateUser(Long userId, String reason);
 
     boolean reactivateUser(Long userId);
+
+    boolean deleteUser(Long userId);
+
+    boolean updateUserStatus(Long userId, boolean active);
+
+    List<UserResponse> getAllUsers(int limit, int offset);
 
     // Role-based Access Control
     boolean updateUserRole(Long userId, UserRole newRole);

@@ -8,6 +8,9 @@ public class ServiceCenterResponse {
     private String name; // core: ServiceCenter.name
     private String region; // core: ServiceCenter.region
     private Map<String, Object> contactInfo; // parsed from core: ServiceCenter.contact_info (JSON)
+    private Long oemId; // ServiceCenter.oemId
+    private Boolean active; // ServiceCenter.active
+    private String status; // ServiceCenter.status
 
     public Long getId() {
         return id;
@@ -47,5 +50,29 @@ public class ServiceCenterResponse {
 
     public void setContactInfo(Map<String, Object> contactInfo) {
         this.contactInfo = contactInfo;
+    }
+
+    public Long getOemId() {
+        return oemId;
+    }
+
+    public void setOemId(Long oemId) {
+        this.oemId = oemId;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

@@ -26,6 +26,11 @@ public class ServiceRecordService implements IServiceRecordService {
     }
 
     @Override
+    public ServiceRecord getById(Long id) {
+        return repository.findById(id).orElse(null);
+    }
+
+    @Override
     public List<ServiceRecord> getByVehicle(Long vehicleId) {
         return repository.findByVehicleId(vehicleId);
     }

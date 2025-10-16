@@ -20,6 +20,12 @@ public interface IServiceCenterService {
 
     boolean deactivateServiceCenter(Long serviceCenterId, String reason);
 
+    boolean deleteServiceCenter(Long serviceCenterId);
+
+    boolean updateServiceCenterStatus(Long serviceCenterId, boolean active);
+
+    List<ServiceCenterResponse> getAllServiceCenters(int limit, int offset);
+
     // OEM-Service Center Relationships
     boolean addOemPartnership(Long serviceCenterId, Long oemId);
 

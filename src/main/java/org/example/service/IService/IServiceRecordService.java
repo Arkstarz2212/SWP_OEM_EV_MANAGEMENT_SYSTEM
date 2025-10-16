@@ -10,6 +10,8 @@ public interface IServiceRecordService {
 
     ServiceRecord update(ServiceRecord record);
 
+    ServiceRecord getById(Long id);
+
     List<ServiceRecord> getByVehicle(Long vehicleId);
 
     List<ServiceRecord> getByClaim(Long claimId);

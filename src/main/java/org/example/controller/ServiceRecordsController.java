@@ -11,6 +11,7 @@ import org.example.service.IService.IAuthenticationService;
 import org.example.service.IService.IServiceRecordService;
 import org.example.service.IService.IWarrantyClaimService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -37,6 +38,22 @@ public class ServiceRecordsController {
     @Autowired
     private IAuthenticationService authenticationService;
 
+    /**
+     * Helper method to convert role from session to UserRole enum
+     */
+    private UserRole convertToUserRole(Object roleObj) {
+        if (roleObj instanceof UserRole) {
+            return (UserRole) roleObj;
+        } else if (roleObj instanceof String) {
+            try {
+                return UserRole.valueOf((String) roleObj);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     @Autowired
     private IWarrantyClaimService warrantyClaimService;
 
@@ -60,10 +77,10 @@ public class ServiceRecordsController {
                         .body(Map.of("error", "Invalid or expired session"));
             }
             Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Insufficient permissions"));
+            UserRole role = convertToUserRole(roleObj);
+            if (role == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
             }
-            UserRole role = (UserRole) roleObj;
             if (role == UserRole.SC_Technician) {
                 // allow if technician_id matches
                 Long userId = (Long) session.get("userId");
@@ -75,8 +92,40 @@ public class ServiceRecordsController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Insufficient permissions to create service record"));
             }
+            // Basic FK sanity checks (prevent obvious bad ids like 0/null)
+            if (record.getVehicle_id() == null || record.getVehicle_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid vehicle_id: must reference an existing vehicle (>0)"));
+            }
+            if (record.getService_center_id() == null || record.getService_center_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error",
+                                "Invalid service_center_id: must reference an existing service center (>0)"));
+            }
+            if (record.getTechnician_id() != null && record.getTechnician_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error",
+                                "Invalid technician_id: must reference an existing user (>0) or be null"));
+            }
+            if (record.getClaim_id() != null && record.getClaim_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid claim_id: must reference an existing claim (>0) or be null"));
+            }
+
             ServiceRecord saved = service.create(record);
             return ResponseEntity.ok(saved);
+        } catch (DataIntegrityViolationException dive) {
+            // Return clearer message for FK errors
+            String msg = dive.getMostSpecificCause() != null ? dive.getMostSpecificCause().getMessage()
+                    : dive.getMessage();
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Foreign key violation while saving service record",
+                    "details", msg,
+                    "payload", Map.of(
+                            "vehicle_id", record.getVehicle_id(),
+                            "service_center_id", record.getService_center_id(),
+                            "claim_id", record.getClaim_id(),
+                            "technician_id", record.getTechnician_id())));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -101,10 +150,10 @@ public class ServiceRecordsController {
                         .body(Map.of("error", "Invalid or expired session"));
             }
             Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Insufficient permissions"));
+            UserRole role = convertToUserRole(roleObj);
+            if (role == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
             }
-            UserRole role = (UserRole) roleObj;
             if (role == UserRole.SC_Technician) {
                 Long userId = (Long) session.get("userId");
                 if (record.getTechnician_id() == null || !record.getTechnician_id().equals(userId)) {
@@ -115,8 +164,40 @@ public class ServiceRecordsController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Insufficient permissions to update service record"));
             }
+            // Basic FK sanity checks
+            if (record.getVehicle_id() != null && record.getVehicle_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid vehicle_id: must reference an existing vehicle (>0)"));
+            }
+            if (record.getService_center_id() != null && record.getService_center_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error",
+                                "Invalid service_center_id: must reference an existing service center (>0)"));
+            }
+            if (record.getTechnician_id() != null && record.getTechnician_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error",
+                                "Invalid technician_id: must reference an existing user (>0) or be null"));
+            }
+            if (record.getClaim_id() != null && record.getClaim_id() <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Invalid claim_id: must reference an existing claim (>0) or be null"));
+            }
+
             record.setId(id);
             return ResponseEntity.ok(service.update(record));
+        } catch (DataIntegrityViolationException dive) {
+            String msg = dive.getMostSpecificCause() != null ? dive.getMostSpecificCause().getMessage()
+                    : dive.getMessage();
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Foreign key violation while updating service record",
+                    "details", msg,
+                    "payload", Map.of(
+                            "id", id,
+                            "vehicle_id", record.getVehicle_id(),
+                            "service_center_id", record.getService_center_id(),
+                            "claim_id", record.getClaim_id(),
+                            "technician_id", record.getTechnician_id())));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -158,7 +239,8 @@ public class ServiceRecordsController {
                     .body(Map.of("error", "Invalid or expired session"));
         }
         Object roleObj = session.get("role");
-        if (!(roleObj instanceof UserRole) || roleObj != UserRole.Admin) {
+        UserRole role = convertToUserRole(roleObj);
+        if (role == null || role != UserRole.Admin) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Admin only"));
         }
         service.delete(id);
@@ -186,19 +268,13 @@ public class ServiceRecordsController {
                         .body(Map.of("error", "Invalid or expired session"));
             }
             Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Insufficient permissions"));
+            UserRole role = convertToUserRole(roleObj);
+            if (role == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
             }
-            UserRole role = (UserRole) roleObj;
 
-            ServiceRecord rec = service.update(new ServiceRecord() {
-                {
-                    setId(id);
-                }
-            });
-            // Re-read to get current
-            List<ServiceRecord> list = service.getByPerformedBetween(OffsetDateTime.MIN, OffsetDateTime.MAX);
-            ServiceRecord current = list.stream().filter(r -> id.equals(r.getId())).findFirst().orElse(null);
+            // Read current record by id
+            ServiceRecord current = service.getById(id);
             if (current == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Service record not found"));
             }

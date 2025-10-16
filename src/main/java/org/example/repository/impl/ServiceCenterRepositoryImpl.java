@@ -26,26 +26,56 @@ public class ServiceCenterRepositoryImpl implements IServiceCenterRepository {
         serviceCenter.setName(rs.getString("name"));
         serviceCenter.setRegion(rs.getString("region"));
         serviceCenter.setContact_info(rs.getString("contact_info"));
+        // optional columns if present
+        try {
+            serviceCenter.setActive((Boolean) rs.getObject("active"));
+        } catch (Exception ignored) {
+        }
+        try {
+            serviceCenter.setStatus(rs.getString("status"));
+        } catch (Exception ignored) {
+        }
+        try {
+            Object oemId = rs.getObject("oem_id");
+            if (oemId instanceof Number) {
+                serviceCenter.setOemId(((Number) oemId).longValue());
+            }
+        } catch (Exception ignored) {
+        }
         return serviceCenter;
     };
 
     @Override
     public ServiceCenter save(ServiceCenter serviceCenter) {
-        String sql = "INSERT INTO aoem.service_centers (code, name, region, contact_info) VALUES (?, ?, ?, ?)";
+        if (serviceCenter.getId() == null) {
+            String sql = "INSERT INTO aoem.service_centers (code, name, region, contact_info, active, status) VALUES (?, ?, ?, ?, ?, ?)";
 
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, new String[] { "id" });
-            ps.setString(1, serviceCenter.getCode());
-            ps.setString(2, serviceCenter.getName());
-            ps.setString(3, serviceCenter.getRegion());
-            ps.setString(4, serviceCenter.getContact_info());
-            return ps;
-        }, keyHolder);
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(sql, new String[] { "id" });
+                ps.setString(1, serviceCenter.getCode());
+                ps.setString(2, serviceCenter.getName());
+                ps.setString(3, serviceCenter.getRegion());
+                ps.setString(4, serviceCenter.getContact_info());
+                ps.setObject(5, serviceCenter.getActive() != null ? serviceCenter.getActive() : Boolean.TRUE);
+                ps.setString(6, serviceCenter.getStatus());
+                return ps;
+            }, keyHolder);
 
-        Number key = keyHolder.getKey();
-        if (key != null) {
-            serviceCenter.setId(key.longValue());
+            Number key = keyHolder.getKey();
+            if (key != null) {
+                serviceCenter.setId(key.longValue());
+            }
+        } else {
+            String sql = "UPDATE aoem.service_centers SET code = ?, name = ?, region = ?, contact_info = ?, active = ?, status = ? WHERE id = ?";
+            jdbcTemplate.update(sql,
+                    serviceCenter.getCode(),
+                    serviceCenter.getName(),
+                    serviceCenter.getRegion(),
+                    serviceCenter.getContact_info(),
+                    serviceCenter.getActive() != null ? serviceCenter.getActive() : Boolean.TRUE,
+                    serviceCenter.getStatus(),
+                    serviceCenter.getId());
         }
         return serviceCenter;
     }
@@ -171,5 +201,13 @@ public class ServiceCenterRepositoryImpl implements IServiceCenterRepository {
     public Long countActiveServiceCenters() {
         String sql = "SELECT COUNT(*) FROM aoem.service_centers";
         return jdbcTemplate.queryForObject(sql, Long.class);
+    }
+
+    @Override
+    public List<ServiceCenter> findByOemId(Long oemId) {
+        String sql = "SELECT sc.*, osc.oem_id FROM aoem.service_centers sc " +
+                "JOIN aoem.oem_service_centers osc ON osc.service_center_id = sc.id " +
+                "WHERE osc.oem_id = ?";
+        return jdbcTemplate.query(sql, serviceCenterRowMapper, oemId);
     }
 }

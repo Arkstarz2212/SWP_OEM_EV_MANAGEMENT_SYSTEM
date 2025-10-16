@@ -218,4 +218,26 @@ public class PartCatalogService implements IPartCatalogService {
         PartData data = deserializePartData(partDataJson);
         return data != null && data.getVehicleModels() != null && data.getVehicleModels().contains(vehicleModel);
     }
+
+    @Override
+    public boolean deletePart(Long partId) {
+        try {
+            return hardDeletePart(partId);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean updatePartStatus(Long partId, boolean active) {
+        try {
+            if (active) {
+                return activatePart(partId);
+            } else {
+                return deactivatePart(partId);
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

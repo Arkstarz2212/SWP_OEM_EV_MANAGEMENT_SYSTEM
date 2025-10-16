@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.example.models.dto.request.CreateVehicleRequest;
 import org.example.models.dto.request.VehicleRegisterRequest;
+import org.example.models.dto.response.ApiErrorResponse;
 import org.example.models.dto.response.VehicleDetailResponse;
 import org.example.models.enums.UserRole;
 import org.example.service.IService.IAuthenticationService;
@@ -33,6 +34,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/vehicles")
@@ -51,13 +53,41 @@ public class VehiclesController {
     @Autowired
     private IWarrantyClaimService warrantyClaimService;
 
+    /**
+     * Helper method to convert role from session to UserRole enum
+     */
+    private UserRole convertToUserRole(Object roleObj) {
+        if (roleObj instanceof UserRole) {
+            return (UserRole) roleObj;
+        } else if (roleObj instanceof String) {
+            try {
+                return UserRole.valueOf((String) roleObj);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolve current request path for consistent error responses
+     */
+    private String getCurrentPath() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
+                .currentRequestAttributes();
+        HttpServletRequest request = attributes.getRequest();
+        return request.getRequestURI();
+    }
+
     @PostMapping
-    @Operation(summary = "Register Vehicle", description = "Register a new vehicle in the system using VIN and model information.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Vehicle registration data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Register Vehicle Example", value = "{\"vin\": \"1HGBH41JXMN109186\", \"model\": \"Model 3\", \"ownerName\": \"John Doe\", \"ownerPhone\": \"+1234567890\"}"))))
+    @Operation(summary = "Register Vehicle", description = "Register a new vehicle in the system using VIN and model information.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Vehicle registration data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Register Vehicle Example", value = "{\n  \"vin\": \"1HGBH41JXMN109186\",\n  \"oemId\": 1,\n  \"model\": \"Model 3\",\n  \"modelYear\": 2023,\n  \"customerId\": 1,\n  \"vehicleData\": {\n    \"variant\": \"Standard Range Plus\",\n    \"color\": \"Pearl White\",\n    \"batteryCapacity\": \"54 kWh\",\n    \"odometerKm\": 15000,\n    \"motorType\": \"Electric\",\n    \"chargingType\": \"AC\",\n    \"maxChargingPower\": 11,\n    \"drivingRange\": 400,\n    \"driveTrain\": \"RWD\"\n  },\n  \"warrantyInfo\": {\n    \"startDate\": \"2023-01-15\",\n    \"endDate\": \"2028-01-15\",\n    \"kmLimit\": 100000,\n    \"batteryFullCoverage\": true,\n    \"motorFullCoverage\": true,\n    \"inverterFullCoverage\": true,\n    \"bmsFullCoverage\": true,\n    \"chargerPartialCoverage\": true\n  }\n}"))))
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Vehicle registered successfully", content = @Content(schema = @Schema(implementation = VehicleDetailResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid request data")
+            @ApiResponse(responseCode = "200", description = "Vehicle registered successfully", content = @Content(schema = @Schema(implementation = VehicleDetailResponse.class), examples = @ExampleObject(name = "Success Response", value = "{\n  \"vehicleId\": 4,\n  \"vin\": \"1HGBH41JXMN109186\",\n  \"model\": \"Model 3\",\n  \"variant\": \"Standard Range Plus\",\n  \"modelYear\": 2023,\n  \"currentOdometerKm\": 15000,\n  \"warrantyStartDate\": \"2023-01-15\",\n  \"warrantyEndDate\": \"2028-01-15\",\n  \"warrantyStatus\": \"Active\",\n  \"customer\": {\n    \"customerId\": 1,\n    \"fullName\": \"John Doe\"\n  },\n  \"components\": [],\n  \"serviceHistory\": [],\n  \"warrantyClaims\": []\n}"))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(examples = @ExampleObject(name = "Error Response", value = "{\"error\": \"VIN, OEM ID, model, and model year are required\"}"))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid token", content = @Content(examples = @ExampleObject(name = "Unauthorized", value = "{\"error\": \"Missing or invalid Authorization header\"}"))),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient permissions", content = @Content(examples = @ExampleObject(name = "Forbidden", value = "{\"error\": \"Only Admin, EVM_Staff or SC_Staff can register vehicles\"}")))
     })
-    public ResponseEntity<?> registerVehicle(@RequestBody CreateVehicleRequest body) {
+    public ResponseEntity<?> registerVehicle(@Valid @RequestBody CreateVehicleRequest body) {
         try {
             // Authorization: Only Admin, EVM_Staff, SC_Staff can register vehicles
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
@@ -66,23 +96,41 @@ public class VehiclesController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Insufficient permissions"));
+            if (roleObj == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiErrorResponse.forbidden("Insufficient permissions", request.getRequestURI()));
             }
-            UserRole currentRole = (UserRole) roleObj;
+
+            UserRole currentRole;
+            if (roleObj instanceof UserRole roleEnum) {
+                currentRole = roleEnum;
+            } else if (roleObj instanceof String roleStr) {
+                try {
+                    currentRole = UserRole.valueOf(roleStr);
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(ApiErrorResponse.forbidden("Invalid user role", request.getRequestURI()));
+                }
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiErrorResponse.forbidden("Insufficient permissions", request.getRequestURI()));
+            }
+
             if (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff
                     && currentRole != UserRole.SC_Staff) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only Admin, EVM_Staff or SC_Staff can register vehicles"));
+                        .body(ApiErrorResponse.forbidden("Only Admin, EVM_Staff or SC_Staff can register vehicles",
+                                request.getRequestURI()));
             }
 
             VehicleRegisterRequest req = new VehicleRegisterRequest();
@@ -105,8 +153,12 @@ public class VehiclesController {
 
             VehicleDetailResponse res = vehicleService.registerVehicleByVin(req);
             return ResponseEntity.ok(res);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiErrorResponse.conflict("Data integrity violation: duplicate or constraint issue",
+                            getCurrentPath()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(e.getMessage(), getCurrentPath()));
         }
     }
 
@@ -123,7 +175,8 @@ public class VehiclesController {
             VehicleDetailResponse res = vehicleService.getVehicleByVin(vin);
             return ResponseEntity.ok(res);
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiErrorResponse.notFound(e.getMessage(), getCurrentPath()));
         }
     }
 
@@ -140,21 +193,24 @@ public class VehiclesController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             VehicleDetailResponse vehicle = vehicleService.getVehicleByVin(vin);
             if (vehicle == null || vehicle.getVehicleId() == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Vehicle not found"));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiErrorResponse.notFound("Vehicle not found", request.getRequestURI()));
             }
             return ResponseEntity.ok(serviceRecordService.getByVehicle(vehicle.getVehicleId()));
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiErrorResponse.notFound(e.getMessage(), getCurrentPath()));
         }
     }
 
@@ -171,21 +227,24 @@ public class VehiclesController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             VehicleDetailResponse vehicle = vehicleService.getVehicleByVin(vin);
             if (vehicle == null || vehicle.getVehicleId() == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Vehicle not found"));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiErrorResponse.notFound("Vehicle not found", request.getRequestURI()));
             }
             return ResponseEntity.ok(warrantyClaimService.getClaimHistory(vehicle.getVehicleId()));
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiErrorResponse.notFound(e.getMessage(), getCurrentPath()));
         }
     }
 
@@ -202,12 +261,13 @@ public class VehiclesController {
             @RequestParam("km") Integer km) {
         try {
             if (km == null || km < 0) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid odometer reading"));
+                return ResponseEntity.badRequest()
+                        .body(ApiErrorResponse.badRequest("Invalid odometer reading", getCurrentPath()));
             }
             boolean success = vehicleService.updateOdometer(vin, km, "manual_update");
             return ResponseEntity.ok(Map.of("success", success));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(e.getMessage(), getCurrentPath()));
         }
     }
 }

@@ -8,9 +8,11 @@ import org.example.models.dto.response.ServiceCenterResponse;
 import org.example.service.IService.IServiceCenterService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -48,6 +50,9 @@ public class ServiceCentersController {
             Object email = body.get("email");
             Object phone = body.get("phone");
             Object address = body.get("address");
+            Object oemId = body.get("oemId");
+            Object active = body.get("active");
+            Object status = body.get("status");
 
             req.setCode(code != null ? String.valueOf(code) : null);
             req.setName(name != null ? String.valueOf(name) : null);
@@ -55,6 +60,12 @@ public class ServiceCentersController {
             req.setEmail(email != null ? String.valueOf(email) : null);
             req.setPhone(phone != null ? String.valueOf(phone) : null);
             req.setAddress(address != null ? String.valueOf(address) : null);
+            if (oemId != null)
+                req.setOemId(Long.valueOf(String.valueOf(oemId)));
+            if (active != null)
+                req.setActive(Boolean.valueOf(String.valueOf(active)));
+            if (status != null)
+                req.setStatus(String.valueOf(status));
 
             ServiceCenterResponse res = serviceCenterService.createServiceCenter(req);
             return ResponseEntity.ok(res);
@@ -164,6 +175,80 @@ public class ServiceCentersController {
             return ResponseEntity.ok(res);
         } catch (Exception e) {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete Service Center", description = "Delete a service center by its ID. This action cannot be undone.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Service center deleted successfully", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "404", description = "Service center not found", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid service center ID", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = Map.class)))
+    })
+    public ResponseEntity<?> deleteServiceCenter(@PathVariable("id") Long id) {
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid service center ID"));
+            }
+
+            boolean deleted = serviceCenterService.deleteServiceCenter(id);
+            if (deleted) {
+                return ResponseEntity.ok(Map.of("success", true, "message", "Service center deleted successfully"));
+            } else {
+                return ResponseEntity.status(404).body(Map.of("error", "Service center not found"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", "Failed to delete service center: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/status")
+    @Operation(summary = "Update Service Center Status", description = "Update the active status of a service center (activate/deactivate).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Service center status updated successfully", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "404", description = "Service center not found", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = Map.class)))
+    })
+    public ResponseEntity<?> updateServiceCenterStatus(@PathVariable("id") Long id,
+            @RequestParam("active") boolean active) {
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid service center ID"));
+            }
+
+            boolean updated = serviceCenterService.updateServiceCenterStatus(id, active);
+            if (updated) {
+                String status = active ? "activated" : "deactivated";
+                return ResponseEntity
+                        .ok(Map.of("success", true, "message", "Service center " + status + " successfully"));
+            } else {
+                return ResponseEntity.status(404).body(Map.of("error", "Service center not found"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", "Failed to update service center status: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Get All Service Centers", description = "Retrieve all service centers with pagination support.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Service centers retrieved successfully", content = @Content(schema = @Schema(implementation = ServiceCenterResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid parameters", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = Map.class)))
+    })
+    public ResponseEntity<?> getAllServiceCenters(@RequestParam(value = "limit", defaultValue = "20") String limit,
+            @RequestParam(value = "offset", defaultValue = "0") String offset) {
+        try {
+            List<ServiceCenterResponse> serviceCenters = serviceCenterService
+                    .getAllServiceCenters(Integer.parseInt(limit), Integer.parseInt(offset));
+            return ResponseEntity.ok(serviceCenters);
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", "Failed to retrieve service centers: " + e.getMessage()));
         }
     }
 }

@@ -24,7 +24,10 @@ CREATE TABLE IF NOT EXISTS aoem.service_centers (
     code VARCHAR(20) NOT NULL UNIQUE,
     name VARCHAR(200) NOT NULL,
     region VARCHAR(50) NOT NULL,
-    contact_info TEXT NULL  -- JSON
+    contact_info TEXT NULL,  -- JSON
+    oem_id INTEGER NULL REFERENCES aoem.oem_manufacturers(id),
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    status VARCHAR(20) NULL
 );
 
 -- ============================================================================

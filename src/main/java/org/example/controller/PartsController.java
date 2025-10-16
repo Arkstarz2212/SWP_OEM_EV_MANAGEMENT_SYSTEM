@@ -1,21 +1,22 @@
 package org.example.controller;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
 import org.example.models.dto.request.PartCatalogCreateRequest;
+import org.example.models.dto.response.ApiErrorResponse;
 import org.example.models.dto.response.PartCatalogResponse;
-import org.example.models.enums.PartCategory;
 import org.example.models.enums.UserRole;
 import org.example.service.IService.IAuthenticationService;
 import org.example.service.IService.IPartCatalogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,6 +32,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/parts")
@@ -39,6 +41,22 @@ public class PartsController {
 
     @Autowired
     private IPartCatalogService partCatalogService;
+
+    /**
+     * Helper method to convert role from session to UserRole enum
+     */
+    private UserRole convertToUserRole(Object roleObj) {
+        if (roleObj instanceof UserRole) {
+            return (UserRole) roleObj;
+        } else if (roleObj instanceof String) {
+            try {
+                return UserRole.valueOf((String) roleObj);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        return null;
+    }
 
     @Autowired
     private IAuthenticationService authenticationService;
@@ -49,7 +67,7 @@ public class PartsController {
             @ApiResponse(responseCode = "200", description = "Part created successfully", content = @Content(schema = @Schema(implementation = PartCatalogResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data")
     })
-    public ResponseEntity<?> createPart(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> createPart(@Valid @RequestBody PartCatalogCreateRequest req) {
         try {
             // RBAC: Admin, EVM_Staff can create parts
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
@@ -58,41 +76,29 @@ public class PartsController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole) ||
-                    (((UserRole) roleObj) != UserRole.Admin && ((UserRole) roleObj) != UserRole.EVM_Staff)) {
+            UserRole currentRole = convertToUserRole(roleObj);
+            if (currentRole == null || (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only Admin or EVM_Staff can create parts"));
+                        .body(ApiErrorResponse.forbidden("Only Admin or EVM_Staff can create parts",
+                                request.getRequestURI()));
             }
-            PartCatalogCreateRequest req = new PartCatalogCreateRequest();
-            Object partNumber = body.get("partNumber");
-            Object name = body.get("name");
-            Object category = body.get("category");
-            Object description = body.get("description");
-            Object unitCost = body.get("unitCost");
-            Object oemId = body.get("oemId");
-            Object manufacturer = body.get("manufacturer");
-
-            req.setPartNumber(partNumber != null ? partNumber.toString() : null);
-            req.setName(name != null ? name.toString() : null);
-            req.setCategory(category != null ? PartCategory.valueOf(category.toString().toUpperCase()) : null);
-            req.setDescription(description != null ? description.toString() : null);
-            req.setUnitCost(unitCost != null ? BigDecimal.valueOf(Double.parseDouble(unitCost.toString())) : null);
-            req.setOemId(oemId != null ? Long.parseLong(oemId.toString()) : 1L);
-            req.setManufacturer(manufacturer != null ? manufacturer.toString() : null);
-
             PartCatalogResponse res = partCatalogService.createPart(req);
             return ResponseEntity.ok(res);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiErrorResponse.conflict("Data integrity violation: duplicate or constraint issue", ""));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(e.getMessage(), ""));
         }
     }
 
@@ -113,18 +119,20 @@ public class PartsController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null || !(session.get("role") instanceof UserRole)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             PartCatalogResponse res = partCatalogService.getPartById(id);
             return ResponseEntity.ok(res);
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiErrorResponse.notFound(e.getMessage(), ""));
         }
     }
 
@@ -144,18 +152,20 @@ public class PartsController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null || !(session.get("role") instanceof UserRole)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             PartCatalogResponse res = partCatalogService.getPartByPartNumber(partNumber);
             return ResponseEntity.ok(res);
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiErrorResponse.notFound(e.getMessage(), ""));
         }
     }
 
@@ -183,13 +193,14 @@ public class PartsController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null || !(session.get("role") instanceof UserRole)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             List<PartCatalogResponse> parts;
             if (keyword != null) {
@@ -202,7 +213,8 @@ public class PartsController {
 
             return ResponseEntity.ok(parts);
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiErrorResponse.notFound(e.getMessage(), ""));
         }
     }
 
@@ -216,24 +228,26 @@ public class PartsController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole) ||
-                    (((UserRole) roleObj) != UserRole.Admin && ((UserRole) roleObj) != UserRole.EVM_Staff)) {
+            UserRole currentRole = convertToUserRole(roleObj);
+            if (currentRole == null || (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only Admin or EVM_Staff can activate parts"));
+                        .body(ApiErrorResponse.forbidden("Only Admin or EVM_Staff can activate parts",
+                                request.getRequestURI()));
             }
             boolean success = partCatalogService.activatePart(id);
             return ResponseEntity.ok(Map.of("success", success));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(e.getMessage(), ""));
         }
     }
 
@@ -247,24 +261,26 @@ public class PartsController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole) ||
-                    (((UserRole) roleObj) != UserRole.Admin && ((UserRole) roleObj) != UserRole.EVM_Staff)) {
+            UserRole currentRole = convertToUserRole(roleObj);
+            if (currentRole == null || (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only Admin or EVM_Staff can deactivate parts"));
+                        .body(ApiErrorResponse.forbidden("Only Admin or EVM_Staff can deactivate parts",
+                                request.getRequestURI()));
             }
             boolean success = partCatalogService.deactivatePart(id);
             return ResponseEntity.ok(Map.of("success", success));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(e.getMessage(), ""));
         }
     }
 
@@ -277,18 +293,96 @@ public class PartsController {
             String authHeader = request.getHeader("Authorization");
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
             if (session == null || !(session.get("role") instanceof UserRole)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
             List<PartCatalogResponse> parts = partCatalogService.getPartsByCategory(category);
             return ResponseEntity.ok(parts);
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiErrorResponse.notFound(e.getMessage(), ""));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete Part", description = "Delete a part from the catalog by its ID. This action cannot be undone.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Part deleted successfully", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "404", description = "Part not found", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid part ID", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = Map.class)))
+    })
+    public ResponseEntity<?> deletePart(@PathVariable("id") Long id) {
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiErrorResponse.badRequest("Invalid part ID", ""));
+            }
+
+            boolean deleted = partCatalogService.deletePart(id);
+            if (deleted) {
+                return ResponseEntity.ok(Map.of("success", true, "message", "Part deleted successfully"));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiErrorResponse.notFound("Part not found", ""));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiErrorResponse.internalServerError("Failed to delete part: " + e.getMessage(), ""));
+        }
+    }
+
+    @PutMapping("/{id}/status")
+    @Operation(summary = "Update Part Status", description = "Update the active status of a part (activate/deactivate).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Part status updated successfully", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "404", description = "Part not found", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = Map.class)))
+    })
+    public ResponseEntity<?> updatePartStatus(@PathVariable("id") Long id, @RequestParam("active") boolean active) {
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiErrorResponse.badRequest("Invalid part ID", ""));
+            }
+
+            boolean updated = partCatalogService.updatePartStatus(id, active);
+            if (updated) {
+                String status = active ? "activated" : "deactivated";
+                return ResponseEntity.ok(Map.of("success", true, "message", "Part " + status + " successfully"));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiErrorResponse.notFound("Part not found", ""));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiErrorResponse.internalServerError("Failed to update part status: " + e.getMessage(), ""));
+        }
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Get All Parts", description = "Retrieve all parts in the catalog with pagination support.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Parts retrieved successfully", content = @Content(schema = @Schema(implementation = PartCatalogResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid parameters", content = @Content(schema = @Schema(implementation = Map.class))),
+            @ApiResponse(responseCode = "500", description = "Internal server error", content = @Content(schema = @Schema(implementation = Map.class)))
+    })
+    public ResponseEntity<?> getAllParts(@RequestParam(value = "limit", defaultValue = "20") String limit,
+            @RequestParam(value = "offset", defaultValue = "0") String offset) {
+        try {
+            List<PartCatalogResponse> parts = partCatalogService.getAllParts(Integer.parseInt(limit),
+                    Integer.parseInt(offset));
+            return ResponseEntity.ok(parts);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiErrorResponse.internalServerError("Failed to retrieve parts: " + e.getMessage(), ""));
         }
     }
 }

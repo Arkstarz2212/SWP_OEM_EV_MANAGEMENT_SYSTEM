@@ -4,8 +4,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.example.models.dto.request.AddClaimAttachmentRequest;
-import org.example.models.dto.request.TechnicianAssignmentRequest;
 import org.example.models.dto.request.CreateWarrantyClaimRequest;
+import org.example.models.dto.request.TechnicianAssignmentRequest;
 import org.example.models.dto.request.WarrantyClaimSearchRequest;
 import org.example.models.dto.request.WarrantyClaimUpdateRequest;
 import org.example.models.dto.response.DashboardResponse;
@@ -15,7 +15,8 @@ import org.example.models.enums.ClaimStatus;
 
 public interface IWarrantyClaimService {
         // SC Staff Operations - Creating and managing warranty claims
-        WarrantyClaimDetailResponse createDraftClaimByVin(String vin, CreateWarrantyClaimRequest request);
+        WarrantyClaimDetailResponse createDraftClaimByVin(String vin, CreateWarrantyClaimRequest request,
+                        Long serviceCenterId, Long createdByUserId);
 
         boolean addAttachment(Long claimId, AddClaimAttachmentRequest request);
 
@@ -73,6 +74,10 @@ public interface IWarrantyClaimService {
         List<WarrantyClaimResponse> getClaimsByStatus(ClaimStatus status, Long organizationId);
 
         boolean updateClaimStatus(Long claimId, ClaimStatus newStatus, String statusNotes, Long updatedById);
+
+        boolean deleteClaim(Long claimId);
+
+        List<WarrantyClaimResponse> getAllClaims(int limit, int offset);
 
         // Notification Support
         List<String> getStakeholdersForNotification(Long claimId);

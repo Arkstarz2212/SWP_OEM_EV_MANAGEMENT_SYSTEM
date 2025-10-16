@@ -38,7 +38,8 @@ public class WarrantyClaimService implements IWarrantyClaimService {
     private org.example.service.IService.IClaimStatusLogService statusLogService;
 
     @Override
-    public WarrantyClaimDetailResponse createDraftClaimByVin(String vin, CreateWarrantyClaimRequest request) {
+    public WarrantyClaimDetailResponse createDraftClaimByVin(String vin, CreateWarrantyClaimRequest request,
+            Long serviceCenterId, Long createdByUserId) {
         if (vin == null || request == null) {
             throw new IllegalArgumentException("VIN and request are required");
         }
@@ -52,14 +53,17 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         WarrantyClaim claim = new WarrantyClaim();
         claim.setClaim_number(claimNumber);
         claim.setVehicle_id(vehicle.getId());
-        claim.setService_center_id(null);
-        claim.setCreated_by_user_id(1L);
+        claim.setService_center_id(serviceCenterId);
+        claim.setCreated_by_user_id(createdByUserId);
         claim.setAssigned_technician_id(null);
         claim.setEvm_reviewer_user_id(null);
         claim.setIssue_description(request.getIssueDescription());
         claim.setDtc_code(request.getDtcCode());
         claim.setMileage_km_at_claim(request.getMileageKmAtClaim());
         claim.setStatus(ClaimStatus.draft.name());
+        claim.setCreated_at(OffsetDateTime.now());
+        claim.setSubmitted_at(null);
+        claim.setApproved_at(null);
 
         WarrantyClaim saved = claimRepository.save(claim);
         // log initial status
@@ -442,5 +446,32 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         res.setAssignedTechnicianId(claim.getAssigned_technician_id());
         res.setEvmReviewerUserId(claim.getEvm_reviewer_user_id());
         return res;
+    }
+
+    @Override
+    public boolean deleteClaim(Long claimId) {
+        try {
+            Optional<WarrantyClaim> claimOpt = claimRepository.findById(claimId);
+            if (claimOpt.isPresent()) {
+                claimRepository.deleteById(claimId);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public List<WarrantyClaimResponse> getAllClaims(int limit, int offset) {
+        try {
+            return claimRepository.findAll().stream()
+                    .skip(offset)
+                    .limit(limit)
+                    .map(this::toResponse)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 }

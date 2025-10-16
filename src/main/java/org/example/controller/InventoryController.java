@@ -131,9 +131,40 @@ public class InventoryController {
             Long serviceCenterId = Long.valueOf(body.get("serviceCenterId").toString());
             String transferReason = String.valueOf(body.getOrDefault("transferReason", "Manual transfer"));
 
+            // Capture quantities before transfer
+            Integer sourceQtyBefore = inventoryService.getPartQuantity(oemInventoryId, partNumber);
+            Integer destQtyBefore = inventoryService.getPartQuantity(serviceCenterId, partNumber);
+
             boolean success = inventoryService.transferPartsToServiceCenter(oemInventoryId, serviceCenterId, partNumber,
                     quantity, transferReason);
-            return ResponseEntity.ok(Map.of("success", success));
+
+            // Capture quantities after transfer (or unchanged if failed)
+            Integer sourceQtyAfter = inventoryService.getPartQuantity(oemInventoryId, partNumber);
+            Integer destQtyAfter = inventoryService.getPartQuantity(serviceCenterId, partNumber);
+
+            Map<String, Object> response = new java.util.LinkedHashMap<>();
+            response.put("success", success);
+            response.put("partNumber", partNumber);
+            response.put("quantityRequested", quantity);
+            response.put("quantityTransferred", success ? quantity : 0);
+            response.put("transferReason", transferReason);
+            response.put("timestamp", java.time.OffsetDateTime.now());
+
+            response.put("source", Map.of(
+                    "locationId", oemInventoryId,
+                    "quantityBefore", sourceQtyBefore,
+                    "quantityAfter", sourceQtyAfter));
+
+            response.put("destination", Map.of(
+                    "locationId", serviceCenterId,
+                    "quantityBefore", destQtyBefore,
+                    "quantityAfter", destQtyAfter));
+
+            if (!success) {
+                response.put("error", "Insufficient quantity at source location");
+            }
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

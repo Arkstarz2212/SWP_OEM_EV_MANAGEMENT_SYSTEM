@@ -14,8 +14,10 @@ import org.example.models.dto.response.LoginResponse;
 import org.example.models.enums.UserRole;
 import org.example.repository.IRepository.IUserRepository;
 import org.example.service.IService.IAuthenticationService;
+import org.example.service.IService.IJwtService;
 import org.example.ulti.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,6 +25,9 @@ public class AuthenticationService implements IAuthenticationService {
 
     @Autowired
     private IUserRepository userRepository;
+
+    @Autowired
+    private IJwtService jwtService;
 
     // In-memory session storage (in production, use Redis or database)
     private final Map<String, Map<String, Object>> sessions = new ConcurrentHashMap<>();
@@ -56,22 +61,13 @@ public class AuthenticationService implements IAuthenticationService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        // Generate tokens
-        String accessToken = SecurityUtil.randomToken(32);
-        String refreshToken = SecurityUtil.randomToken(32);
-        String sessionId = SecurityUtil.randomToken(16);
-
-        // Create session
-        Map<String, Object> sessionData = new HashMap<>();
-        sessionData.put("userId", user.getId());
-        sessionData.put("email", user.getEmail());
-        sessionData.put("role", user.getRole());
-        sessionData.put("serviceCenterId", user.getServiceCenterId());
-        sessionData.put("createdAt", LocalDateTime.now());
-        sessionData.put("expiresAt", LocalDateTime.now().plusSeconds(TOKEN_EXPIRATION_SECONDS));
-        sessionData.put("ip", "127.0.0.1"); // TODO: Get real IP from request context
-
-        sessions.put(sessionId, sessionData);
+        // Generate JWT tokens
+        String accessToken = jwtService.generateAccessToken(
+                user.getId(),
+                user.getEmail(),
+                user.getRole(),
+                user.getServiceCenterId());
+        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail());
 
         // Update user's last login
         updateUserLastLogin(user);
@@ -80,7 +76,7 @@ public class AuthenticationService implements IAuthenticationService {
         LoginResponse response = new LoginResponse();
         response.setAccessToken(accessToken);
         response.setRefreshToken(refreshToken);
-        response.setExpiresIn(TOKEN_EXPIRATION_SECONDS);
+        response.setExpiresIn(86400L); // 24 hours in seconds
 
         // Set user info
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo();
@@ -105,15 +101,65 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
-    public boolean logout(Long userId, String sessionId) {
-        if (sessionId != null && sessions.containsKey(sessionId)) {
-            Map<String, Object> session = sessions.get(sessionId);
-            if (session.get("userId").equals(userId)) {
-                sessions.remove(sessionId);
-                return true;
-            }
+    public LoginResponse getCurrentUserInfo(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalArgumentException("No valid authentication found");
         }
-        return false;
+
+        // Extract user email from authentication principal
+        String email = authentication.getName();
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("User email not found in authentication");
+        }
+
+        // Find user by email
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            throw new IllegalArgumentException("User not found");
+        }
+
+        User user = userOpt.get();
+        if (!user.getIsActive()) {
+            throw new IllegalArgumentException("User account is inactive");
+        }
+
+        // Create response without generating new tokens
+        LoginResponse response = new LoginResponse();
+
+        // Set user info
+        LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo();
+        userInfo.setUserId(user.getId());
+        userInfo.setFullName(user.getFullName());
+        userInfo.setEmail(user.getEmail());
+        userInfo.setRole(user.getRole());
+
+        // Map stored string role to enum for permission derivation
+        UserRole roleEnum;
+        try {
+            roleEnum = user.getRole() != null ? UserRole.valueOf(user.getRole()) : null;
+        } catch (IllegalArgumentException ex) {
+            roleEnum = null;
+        }
+        userInfo.setPermissions(getUserPermissions(roleEnum));
+        userInfo.setServiceCenterName(getServiceCenterName(user.getServiceCenterId()));
+        userInfo.setLastLogin(LocalDateTime.now());
+
+        response.setUser(userInfo);
+        response.setAccessToken(null); // Don't expose token in /me endpoint
+        response.setRefreshToken(null);
+        response.setExpiresIn(0L);
+
+        return response;
+    }
+
+    @Override
+    public boolean logout(Long userId, String sessionId) {
+        // For JWT, logout is handled on client side by removing the token
+        // In a stateless JWT system, we can't invalidate tokens server-side
+        // unless we maintain a blacklist, which defeats the purpose of statelessness
+        // For now, just return true - actual logout happens when client discards the
+        // token
+        return true;
     }
 
     @Override
@@ -198,20 +244,8 @@ public class AuthenticationService implements IAuthenticationService {
 
     @Override
     public Map<String, Object> getSessionByToken(String sessionToken) {
-        for (Map.Entry<String, Map<String, Object>> entry : sessions.entrySet()) {
-            Map<String, Object> session = entry.getValue();
-            if (sessionToken.equals(session.get("sessionToken"))) {
-                // Check if session is expired
-                LocalDateTime expiresAt = (LocalDateTime) session.get("expiresAt");
-                if (expiresAt.isAfter(LocalDateTime.now())) {
-                    return session;
-                } else {
-                    // Remove expired session
-                    sessions.remove(entry.getKey());
-                }
-            }
-        }
-        return null;
+        // For JWT, validate the token directly
+        return jwtService.validateToken(sessionToken);
     }
 
     @Override

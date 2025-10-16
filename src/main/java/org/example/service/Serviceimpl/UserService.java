@@ -617,6 +617,49 @@ public class UserService implements IUserService {
         return response;
     }
 
+    @Override
+    public boolean deleteUser(Long userId) {
+        try {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                userRepository.deleteById(userId);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean updateUserStatus(Long userId, boolean active) {
+        try {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                user.setIsActive(active);
+                userRepository.save(user);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public List<UserResponse> getAllUsers(int limit, int offset) {
+        try {
+            return userRepository.findAll().stream()
+                    .skip(offset)
+                    .limit(limit)
+                    .map(this::convertToUserResponse)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
     private List<String> getUserPermissions(UserRole role) {
         return switch (role) {
             case Admin -> List.of("read", "write", "delete", "admin");

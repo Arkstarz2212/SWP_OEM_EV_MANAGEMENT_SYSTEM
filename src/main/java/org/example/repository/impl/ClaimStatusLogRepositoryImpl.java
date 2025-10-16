@@ -42,7 +42,7 @@ public class ClaimStatusLogRepositoryImpl implements IClaimStatusLogRepository {
     @Override
     public ClaimStatusHistory save(ClaimStatusHistory log) {
         if (log.getId() == null) {
-            String sql = "INSERT INTO warranty_claim_status_logs (claim_id, from_status, to_status, changed_by_user_id, note, changed_at) VALUES (?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO aoem.warranty_claim_status_logs (claim_id, from_status, to_status, changed_by_user_id, note, changed_at) VALUES (?, ?, ?, ?, ?, ?)";
             KeyHolder kh = new GeneratedKeyHolder();
             jdbcTemplate.update(conn -> {
                 PreparedStatement ps = conn.prepareStatement(sql, new String[] { "id" });
@@ -61,7 +61,7 @@ public class ClaimStatusLogRepositoryImpl implements IClaimStatusLogRepository {
                 log.setId(genId.longValue());
             }
         } else {
-            String sql = "UPDATE warranty_claim_status_logs SET claim_id=?, from_status=?, to_status=?, changed_by_user_id=?, note=?, changed_at=? WHERE id=?";
+            String sql = "UPDATE aoem.warranty_claim_status_logs SET claim_id=?, from_status=?, to_status=?, changed_by_user_id=?, note=?, changed_at=? WHERE id=?";
             jdbcTemplate.update(sql,
                     log.getClaimId(),
                     log.getFromStatus() != null ? log.getFromStatus().name() : null,
@@ -77,13 +77,14 @@ public class ClaimStatusLogRepositoryImpl implements IClaimStatusLogRepository {
 
     @Override
     public List<ClaimStatusHistory> findByClaimId(Long claimId) {
-        return jdbcTemplate.query("SELECT * FROM warranty_claim_status_logs WHERE claim_id=? ORDER BY changed_at ASC",
+        return jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_claim_status_logs WHERE claim_id=? ORDER BY changed_at ASC",
                 rowMapper, claimId);
     }
 
     @Override
     public List<ClaimStatusHistory> findByChangedAtBetween(OffsetDateTime start, OffsetDateTime end) {
-        return jdbcTemplate.query("SELECT * FROM warranty_claim_status_logs WHERE changed_at BETWEEN ? AND ?",
+        return jdbcTemplate.query("SELECT * FROM aoem.warranty_claim_status_logs WHERE changed_at BETWEEN ? AND ?",
                 rowMapper,
                 java.sql.Timestamp.valueOf(start.toLocalDateTime()),
                 java.sql.Timestamp.valueOf(end.toLocalDateTime()));
@@ -92,13 +93,14 @@ public class ClaimStatusLogRepositoryImpl implements IClaimStatusLogRepository {
     @Override
     public Optional<ClaimStatusHistory> findLastByClaimId(Long claimId) {
         List<ClaimStatusHistory> list = jdbcTemplate.query(
-                "SELECT * FROM warranty_claim_status_logs WHERE claim_id=? ORDER BY changed_at DESC LIMIT 1", rowMapper,
+                "SELECT * FROM aoem.warranty_claim_status_logs WHERE claim_id=? ORDER BY changed_at DESC LIMIT 1",
+                rowMapper,
                 claimId);
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
     @Override
     public void deleteByClaimId(Long claimId) {
-        jdbcTemplate.update("DELETE FROM warranty_claim_status_logs WHERE claim_id=?", claimId);
+        jdbcTemplate.update("DELETE FROM aoem.warranty_claim_status_logs WHERE claim_id=?", claimId);
     }
 }

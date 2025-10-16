@@ -32,4 +32,8 @@ public interface IPartCatalogService {
     boolean activatePart(Long partId);
 
     boolean deactivatePart(Long partId);
+
+    boolean deletePart(Long partId);
+
+    boolean updatePartStatus(Long partId, boolean active);
 }

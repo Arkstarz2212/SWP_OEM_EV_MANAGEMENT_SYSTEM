@@ -55,6 +55,11 @@ public class WarrantyClaimRepositoryImpl implements IWarrantyClaimRepository {
             claim.setSubmitted_at(submittedAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
         }
 
+        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
+        if (createdAt != null) {
+            claim.setCreated_at(createdAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
+        }
+
         java.sql.Timestamp approvedAt = rs.getTimestamp("approved_at");
         if (approvedAt != null) {
             claim.setApproved_at(approvedAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
@@ -75,7 +80,11 @@ public class WarrantyClaimRepositoryImpl implements IWarrantyClaimRepository {
                 PreparedStatement ps = connection.prepareStatement(sql, new String[] { "id" });
                 ps.setString(1, warrantyClaim.getClaim_number());
                 ps.setLong(2, warrantyClaim.getVehicle_id());
-                ps.setLong(3, warrantyClaim.getService_center_id());
+                if (warrantyClaim.getService_center_id() != null) {
+                    ps.setLong(3, warrantyClaim.getService_center_id());
+                } else {
+                    ps.setNull(3, java.sql.Types.BIGINT);
+                }
                 ps.setLong(4, warrantyClaim.getCreated_by_user_id());
 
                 if (warrantyClaim.getAssigned_technician_id() != null) {

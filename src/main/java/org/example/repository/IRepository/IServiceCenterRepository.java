@@ -33,6 +33,9 @@ public interface IServiceCenterRepository {
 
     List<ServiceCenter> findActiveServiceCenters();
 
+    // OEM relation methods
+    List<ServiceCenter> findByOemId(Long oemId);
+
     // License methods
     Optional<ServiceCenter> findByLicenseNumber(String licenseNumber);
 

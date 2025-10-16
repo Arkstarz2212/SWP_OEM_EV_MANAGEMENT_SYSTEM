@@ -6,6 +6,9 @@ public class ServiceCenter {
     private String name; // aoem.service_centers.name
     private String region; // aoem.service_centers.region
     private String contact_info; // aoem.service_centers.contact_info (JSON text)
+    private Long oemId; // aoem.service_centers.oem_id
+    private Boolean active; // aoem.service_centers.active
+    private String status; // aoem.service_centers.status
 
     public ServiceCenter() {
     }
@@ -55,5 +58,29 @@ public class ServiceCenter {
 
     public void setContact_info(String contact_info) {
         this.contact_info = contact_info;
+    }
+
+    public Long getOemId() {
+        return oemId;
+    }
+
+    public void setOemId(Long oemId) {
+        this.oemId = oemId;
+    }
+
+    public Boolean getActive() {
+        return active;
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

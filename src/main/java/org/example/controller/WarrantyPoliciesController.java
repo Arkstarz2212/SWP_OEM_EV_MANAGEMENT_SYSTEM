@@ -39,6 +39,22 @@ public class WarrantyPoliciesController {
     @Autowired
     private IWarrantyPolicyService warrantyPolicyService;
 
+    /**
+     * Helper method to convert role from session to UserRole enum
+     */
+    private UserRole convertToUserRole(Object roleObj) {
+        if (roleObj instanceof UserRole) {
+            return (UserRole) roleObj;
+        } else if (roleObj instanceof String) {
+            try {
+                return UserRole.valueOf((String) roleObj);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     @Autowired
     private IAuthenticationService authenticationService;
 
@@ -66,8 +82,8 @@ public class WarrantyPoliciesController {
                         .body(Map.of("error", "Invalid or expired session"));
             }
             Object roleObj = session.get("role");
-            if (!(roleObj instanceof UserRole) ||
-                    (((UserRole) roleObj) != UserRole.Admin && ((UserRole) roleObj) != UserRole.EVM_Staff)) {
+            UserRole currentRole = convertToUserRole(roleObj);
+            if (currentRole == null || (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Only Admin or EVM_Staff can create policies"));
             }
