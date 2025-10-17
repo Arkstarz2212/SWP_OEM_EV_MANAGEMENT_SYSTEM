@@ -353,15 +353,34 @@ public class WarrantyClaimsController {
             @RequestParam(value = "serviceCenterId", required = false) Long serviceCenterId) {
         try {
             List<WarrantyClaimResponse> claims;
-            if (vehicleId != null) {
+
+            // Convert status to enum if provided
+            ClaimStatus claimStatus = null;
+            if (status != null) {
+                try {
+                    claimStatus = ClaimStatus.valueOf(status.toLowerCase());
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error",
+                            "Invalid status. Valid statuses: " + java.util.Arrays.toString(ClaimStatus.values())));
+                }
+            }
+
+            if (vehicleId != null && serviceCenterId != null) {
+                // If both vehicleId and serviceCenterId are provided, get claims by service
+                // center with status filter
+                claims = warrantyClaimService.getClaimsByServiceCenter(serviceCenterId, claimStatus);
+            } else if (vehicleId != null) {
+                // If only vehicleId is provided, get claim history for that vehicle
                 claims = warrantyClaimService.getClaimHistory(vehicleId);
             } else if (serviceCenterId != null) {
-                ClaimStatus claimStatus = status != null ? ClaimStatus.valueOf(status.toLowerCase()) : null;
+                // If only serviceCenterId is provided, get claims by service center with status
+                // filter
                 claims = warrantyClaimService.getClaimsByServiceCenter(serviceCenterId, claimStatus);
             } else {
                 // Default to getting claims by status
-                ClaimStatus claimStatus = status != null ? ClaimStatus.valueOf(status.toLowerCase())
-                        : ClaimStatus.draft;
+                if (claimStatus == null) {
+                    claimStatus = ClaimStatus.draft; // Default status
+                }
                 claims = warrantyClaimService.getClaimsByStatus(claimStatus, 1L); // Default organization
             }
             return ResponseEntity.ok(claims);
