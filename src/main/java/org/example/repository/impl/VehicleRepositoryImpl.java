@@ -38,6 +38,16 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
 
     @Override
     public Vehicle save(Vehicle vehicle) {
+        if (vehicle.getId() != null) {
+            // Update existing vehicle
+            return updateVehicle(vehicle);
+        } else {
+            // Insert new vehicle
+            return insertVehicle(vehicle);
+        }
+    }
+
+    private Vehicle insertVehicle(Vehicle vehicle) {
         String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_id, vehicle_data, warranty_info) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -61,6 +71,22 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
         if (key != null) {
             vehicle.setId(key.longValue());
         }
+        return vehicle;
+    }
+
+    private Vehicle updateVehicle(Vehicle vehicle) {
+        String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_id = ?, vehicle_data = ?, warranty_info = ? WHERE id = ?";
+
+        jdbcTemplate.update(sql,
+                vehicle.getVin(),
+                vehicle.getOemId(),
+                vehicle.getModel(),
+                vehicle.getModelYear(),
+                vehicle.getCustomerId(),
+                vehicle.getVehicle_data(),
+                vehicle.getWarranty_info(),
+                vehicle.getId());
+
         return vehicle;
     }
 

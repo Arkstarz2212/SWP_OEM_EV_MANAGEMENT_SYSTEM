@@ -258,18 +258,31 @@ public class VehiclesController {
             @Parameter(name = "km", description = "New odometer reading in kilometers", required = true, example = "50000")
     })
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Odometer updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid odometer reading or VIN")
+            @ApiResponse(responseCode = "200", description = "Odometer updated successfully", content = @Content(schema = @Schema(implementation = VehicleDetailResponse.class), examples = @ExampleObject(name = "Success Response", value = "{\n  \"vehicleId\": 1,\n  \"vin\": \"1HGBH41JXMN109186\",\n  \"model\": \"Model 3\",\n  \"variant\": \"Standard Range Plus\",\n  \"modelYear\": 2023,\n  \"currentOdometerKm\": 50000,\n  \"warrantyStartDate\": \"2023-01-15\",\n  \"warrantyEndDate\": \"2028-01-15\",\n  \"warrantyStatus\": \"Active\",\n  \"customer\": {\n    \"customerId\": 1,\n    \"fullName\": \"John Doe\"\n  }\n}"))),
+            @ApiResponse(responseCode = "400", description = "Invalid odometer reading or VIN"),
+            @ApiResponse(responseCode = "404", description = "Vehicle not found")
     })
     public ResponseEntity<?> updateOdometer(@PathVariable("vin") String vin,
             @RequestParam("km") Integer km) {
         try {
+            if (vin == null || vin.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiErrorResponse.badRequest("VIN is required", getCurrentPath()));
+            }
             if (km == null || km < 0) {
                 return ResponseEntity.badRequest()
                         .body(ApiErrorResponse.badRequest("Invalid odometer reading", getCurrentPath()));
             }
+
             boolean success = vehicleService.updateOdometer(vin, km, "manual_update");
-            return ResponseEntity.ok(Map.of("success", success));
+            if (!success) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiErrorResponse.notFound("Vehicle not found", getCurrentPath()));
+            }
+
+            // Return the updated vehicle data
+            VehicleDetailResponse updatedVehicle = vehicleService.getVehicleByVin(vin);
+            return ResponseEntity.ok(updatedVehicle);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiErrorResponse.badRequest(e.getMessage(), getCurrentPath()));
         }
