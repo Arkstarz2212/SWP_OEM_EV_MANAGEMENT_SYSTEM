@@ -1,328 +1,395 @@
 package org.example.controller;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
-import org.example.models.core.WarrantyPolicy;
 import org.example.models.dto.request.WarrantyPolicyCreateRequest;
-import org.example.models.enums.UserRole;
-import org.example.service.IService.IAuthenticationService;
+import org.example.models.dto.response.ApiErrorResponse;
+import org.example.models.dto.response.WarrantyPolicyResponse;
 import org.example.service.IService.IWarrantyPolicyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/warranty-policies")
-@Tag(name = "Warranty Policies", description = "Warranty policy management including creation, lookup, and validation")
+@Tag(name = "Warranty Policies", description = "Warranty policy management for OEM manufacturers including creation, search, and policy analysis")
 public class WarrantyPoliciesController {
 
     @Autowired
     private IWarrantyPolicyService warrantyPolicyService;
 
-    /**
-     * Helper method to convert role from session to UserRole enum
-     */
-    private UserRole convertToUserRole(Object roleObj) {
-        if (roleObj instanceof UserRole) {
-            return (UserRole) roleObj;
-        } else if (roleObj instanceof String) {
-            try {
-                return UserRole.valueOf((String) roleObj);
-            } catch (IllegalArgumentException e) {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    @Autowired
-    private IAuthenticationService authenticationService;
-
     @PostMapping
-    @Operation(summary = "Create Warranty Policy", description = "Create a new warranty policy for a vehicle model or component category.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Warranty policy creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"model\": \"Model 3\", \"componentCategory\": \"BATTERY\", \"monthsCoverage\": 24, \"kmCoverage\": 50000, \"notes\": \"OEM standard warranty\"}"))))
+    @Operation(summary = "Create New Warranty Policy", description = "Create a new warranty policy for a specific OEM manufacturer with coverage details and effective dates.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Policy created successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicy.class))),
-            @ApiResponse(responseCode = "400", description = "Invalid request data")
+            @ApiResponse(responseCode = "201", description = "Warranty policy created successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Policy code already exists", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public ResponseEntity<?> createPolicy(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> createWarrantyPolicy(
+            @Valid @RequestBody WarrantyPolicyCreateRequest request,
+            @RequestParam(defaultValue = "1") @Parameter(description = "OEM Manufacturer ID") Long oemId) {
         try {
-            // RBAC: Admin, EVM_Staff
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            Object roleObj = session.get("role");
-            UserRole currentRole = convertToUserRole(roleObj);
-            if (currentRole == null || (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Only Admin or EVM_Staff can create policies"));
-            }
-            WarrantyPolicyCreateRequest req = new WarrantyPolicyCreateRequest();
-            Object model = body.get("model");
-            Object componentCategory = body.get("componentCategory");
-            Object monthsCoverage = body.get("monthsCoverage");
-            Object kmCoverage = body.get("kmCoverage");
-            Object notes = body.get("notes");
-
-            req.setModel(model != null ? String.valueOf(model) : null);
-            req.setComponentCategory(componentCategory != null ? String.valueOf(componentCategory) : null);
-            req.setMonthsCoverage(monthsCoverage != null ? Integer.valueOf(monthsCoverage.toString()) : null);
-            req.setKmCoverage(kmCoverage != null ? Integer.valueOf(kmCoverage.toString()) : null);
-            req.setNotes(notes != null ? String.valueOf(notes) : null);
-
-            WarrantyPolicy res = warrantyPolicyService.createWarrantyPolicy(req);
-            return ResponseEntity.ok(res);
+            WarrantyPolicyResponse response = warrantyPolicyService.createWarrantyPolicy(request, oemId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.badRequest(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to create warranty policy",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Policy by ID", description = "Retrieve a warranty policy by its unique identifier.", parameters = {
-            @Parameter(name = "id", description = "Policy ID", required = true, example = "1") })
-    public ResponseEntity<?> getPolicyById(@PathVariable("id") Long id) {
-        try {
-            // RBAC: any authenticated role
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            Optional<WarrantyPolicy> res = warrantyPolicyService.getPolicyById(id);
-            if (res.isPresent()) {
-                return ResponseEntity.ok(res.get());
-            } else {
-                return ResponseEntity.status(404).body(Map.of("error", "Policy not found"));
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    @GetMapping("/validate")
-    @Operation(summary = "Validate Warranty Coverage", description = "Validate whether a vehicle model and component category are covered under warranty for given usage.", parameters = {
-            @Parameter(name = "model", description = "Vehicle model", required = true, example = "Model 3"),
-            @Parameter(name = "category", description = "Component category", required = true, example = "BATTERY"),
-            @Parameter(name = "months", description = "Months in service", required = true, example = "18"),
-            @Parameter(name = "km", description = "Kilometers driven", required = true, example = "30000")
+    @Operation(summary = "Get Warranty Policy by ID", description = "Retrieve detailed information about a specific warranty policy by its unique identifier.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Warranty policy retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public ResponseEntity<?> validateWarranty(@RequestParam("model") String model,
-            @RequestParam("category") String category,
-            @RequestParam("months") Integer months,
-            @RequestParam("km") Integer km) {
+    public ResponseEntity<?> getWarrantyPolicyById(
+            @PathVariable @Parameter(description = "Warranty Policy ID", required = true, example = "1") Long id) {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            // Note: This would need proper validation logic based on available methods
-            boolean isValid = true; // Placeholder
-            return ResponseEntity.ok(Map.of("valid", isValid));
+            WarrantyPolicyResponse response = warrantyPolicyService.getWarrantyPolicyById(id);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.notFound(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve warranty policy",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    @GetMapping("/model/{model}")
-    @Operation(summary = "List Policies by Model", description = "Get all warranty policies applicable for a specific vehicle model.", parameters = {
-            @Parameter(name = "model", description = "Vehicle model", required = true, example = "Model 3") })
-    public ResponseEntity<?> getPoliciesByModel(@PathVariable("model") String model) {
+    @GetMapping("/by-code/{policyCode}")
+    @Operation(summary = "Get Warranty Policy by Code", description = "Retrieve warranty policy information using the policy code.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Warranty policy retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> getWarrantyPolicyByCode(
+            @PathVariable @Parameter(description = "Policy Code", required = true, example = "ModelA_Battery") String policyCode) {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            List<WarrantyPolicy> policies = warrantyPolicyService.getPoliciesByModel(model, 1L); // Default OEM
-            return ResponseEntity.ok(policies);
+            WarrantyPolicyResponse response = warrantyPolicyService.getWarrantyPolicyByCode(policyCode);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.notFound(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve warranty policy",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    @GetMapping("/component/{component}")
-    @Operation(summary = "List Policies by Component", description = "Get all warranty policies applicable for a specific component category.", parameters = {
-            @Parameter(name = "component", description = "Component category", required = true, example = "BATTERY") })
-    public ResponseEntity<?> getPoliciesByComponent(@PathVariable("component") String component) {
+    @PutMapping("/{id}")
+    @Operation(summary = "Update Warranty Policy", description = "Update existing warranty policy details including coverage terms and effective dates.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Warranty policy updated successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> updateWarrantyPolicy(
+            @PathVariable @Parameter(description = "Warranty Policy ID", required = true, example = "1") Long id,
+            @Valid @RequestBody WarrantyPolicyCreateRequest request) {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            List<WarrantyPolicy> policies = warrantyPolicyService.getPoliciesByComponent(component, 1L); // Default OEM
-            return ResponseEntity.ok(policies);
+            WarrantyPolicyResponse response = warrantyPolicyService.updateWarrantyPolicy(id, request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.notFound(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to update warranty policy",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    @GetMapping("/stats/model/{model}")
-    @Operation(summary = "Policy Statistics by Model", description = "Get simple statistics for warranty policies by model (demo endpoint).", parameters = {
-            @Parameter(name = "model", description = "Vehicle model", required = true, example = "Model 3") })
-    public ResponseEntity<?> getPolicyStatsByModel(@PathVariable("model") String model) {
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete Warranty Policy", description = "Remove a warranty policy from the system. Cannot delete default policies or those referenced by active claims.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Warranty policy deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Cannot delete policy due to business rules", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> deleteWarrantyPolicy(
+            @PathVariable @Parameter(description = "Warranty Policy ID", required = true, example = "1") Long id) {
         try {
-            // Note: This would need proper statistics calculation
-            Map<String, Object> stats = Map.of("model", model, "count", 0);
-            return ResponseEntity.ok(stats);
+            boolean deleted = warrantyPolicyService.deleteWarrantyPolicy(id);
+            if (deleted) {
+                return ResponseEntity.ok().build();
+            } else {
+                ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to delete warranty policy",
+                        "/api/warranty-policies");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            }
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.notFound(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            ApiErrorResponse error = ApiErrorResponse.conflict(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to delete warranty policy",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
     @GetMapping
-    @Operation(summary = "List Warranty Policies", description = "List policies by OEM or return active policies for default OEM when not specified.", parameters = {
-            @Parameter(name = "oemId", description = "OEM ID to filter policies", required = false, example = "1"),
-            @Parameter(name = "active", description = "Filter active policies", required = false, example = "true")
+    @Operation(summary = "List All Warranty Policies", description = "Retrieve a paginated list of all warranty policies in the system.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Warranty policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
     })
-    public ResponseEntity<?> listPolicies(@RequestParam(value = "oemId", required = false) Long oemId,
-            @RequestParam(value = "active", required = false) Boolean active) {
+    public ResponseEntity<?> getAllWarrantyPolicies(
+            @RequestParam(defaultValue = "10") @Parameter(description = "Number of records to return") int limit,
+            @RequestParam(defaultValue = "0") @Parameter(description = "Number of records to skip") int offset) {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            List<WarrantyPolicy> policies;
-            if (oemId != null) {
-                policies = warrantyPolicyService.getPoliciesByOem(oemId);
+            List<WarrantyPolicyResponse> policies = warrantyPolicyService.getAllWarrantyPolicies(limit, offset);
+            return ResponseEntity.ok(policies);
+        } catch (Exception e) {
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve warranty policies",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/oem/{oemId}")
+    @Operation(summary = "Get Warranty Policies by OEM", description = "Retrieve all warranty policies for a specific OEM manufacturer.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Warranty policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
+    })
+    public ResponseEntity<?> getWarrantyPoliciesByOem(
+            @PathVariable @Parameter(description = "OEM Manufacturer ID", required = true, example = "1") Long oemId,
+            @RequestParam(defaultValue = "10") @Parameter(description = "Number of records to return") int limit,
+            @RequestParam(defaultValue = "0") @Parameter(description = "Number of records to skip") int offset) {
+        try {
+            List<WarrantyPolicyResponse> policies = warrantyPolicyService.getWarrantyPoliciesByOem(oemId, limit,
+                    offset);
+            return ResponseEntity.ok(policies);
+        } catch (Exception e) {
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve warranty policies",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/active")
+    @Operation(summary = "Get Active Warranty Policies", description = "Retrieve all currently active warranty policies.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Active warranty policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
+    })
+    public ResponseEntity<?> getActiveWarrantyPolicies(
+            @RequestParam(defaultValue = "10") @Parameter(description = "Number of records to return") int limit,
+            @RequestParam(defaultValue = "0") @Parameter(description = "Number of records to skip") int offset) {
+        try {
+            List<WarrantyPolicyResponse> policies = warrantyPolicyService.getActiveWarrantyPolicies(limit, offset);
+            return ResponseEntity.ok(policies);
+        } catch (Exception e) {
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve active warranty policies",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/oem/{oemId}/active")
+    @Operation(summary = "Get Active Warranty Policies by OEM", description = "Retrieve all active warranty policies for a specific OEM manufacturer.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Active warranty policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
+    })
+    public ResponseEntity<?> getActiveWarrantyPoliciesByOem(
+            @PathVariable @Parameter(description = "OEM Manufacturer ID", required = true, example = "1") Long oemId,
+            @RequestParam(defaultValue = "10") @Parameter(description = "Number of records to return") int limit,
+            @RequestParam(defaultValue = "0") @Parameter(description = "Number of records to skip") int offset) {
+        try {
+            List<WarrantyPolicyResponse> policies = warrantyPolicyService.getActiveWarrantyPoliciesByOem(oemId, limit,
+                    offset);
+            return ResponseEntity.ok(policies);
+        } catch (Exception e) {
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve active warranty policies",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search Warranty Policies", description = "Search warranty policies by policy name or code using keywords.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Search results retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
+    })
+    public ResponseEntity<?> searchWarrantyPolicies(
+            @RequestParam @Parameter(description = "Search keyword", required = true, example = "battery") String keyword,
+            @RequestParam(defaultValue = "10") @Parameter(description = "Number of records to return") int limit,
+            @RequestParam(defaultValue = "0") @Parameter(description = "Number of records to skip") int offset) {
+        try {
+            List<WarrantyPolicyResponse> policies = warrantyPolicyService.searchWarrantyPolicies(keyword, limit,
+                    offset);
+            return ResponseEntity.ok(policies);
+        } catch (Exception e) {
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to search warranty policies",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/oem/{oemId}/default")
+    @Operation(summary = "Get Default Policy by OEM", description = "Retrieve the default warranty policy for a specific OEM manufacturer.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Default warranty policy retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
+            @ApiResponse(responseCode = "404", description = "No default policy found for OEM", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> getDefaultPolicyByOem(
+            @PathVariable @Parameter(description = "OEM Manufacturer ID", required = true, example = "1") Long oemId) {
+        try {
+            WarrantyPolicyResponse response = warrantyPolicyService.getDefaultPolicyByOem(oemId);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.notFound(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve default warranty policy",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @PutMapping("/{id}/set-default")
+    @Operation(summary = "Set Default Policy", description = "Set a warranty policy as the default policy for its OEM manufacturer.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Policy set as default successfully"),
+            @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> setDefaultPolicy(
+            @PathVariable @Parameter(description = "Warranty Policy ID", required = true, example = "1") Long id,
+            @RequestParam(defaultValue = "1") @Parameter(description = "OEM Manufacturer ID") Long oemId) {
+        try {
+            boolean success = warrantyPolicyService.setDefaultPolicy(id, oemId);
+            if (success) {
+                return ResponseEntity.ok().build();
             } else {
-                policies = warrantyPolicyService.getActivePolicies(1L); // Default OEM
+                ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to set default policy",
+                        "/api/warranty-policies");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            }
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.notFound(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to set default policy",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @PutMapping("/{id}/status")
+    @Operation(summary = "Update Policy Status", description = "Activate or deactivate a warranty policy.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Policy status updated successfully"),
+            @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> updatePolicyStatus(
+            @PathVariable @Parameter(description = "Warranty Policy ID", required = true, example = "1") Long id,
+            @RequestParam @Parameter(description = "Active status", required = true) boolean isActive) {
+        try {
+            boolean success = warrantyPolicyService.updateWarrantyPolicyStatus(id, isActive);
+            if (success) {
+                return ResponseEntity.ok().build();
+            } else {
+                ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to update policy status",
+                        "/api/warranty-policies");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            }
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.notFound(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to update policy status",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/analytics/coverage")
+    @Operation(summary = "Get Policies by Coverage", description = "Retrieve warranty policies filtered by coverage duration or mileage.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
+    })
+    public ResponseEntity<?> getPoliciesByCoverage(
+            @RequestParam(required = false) @Parameter(description = "Minimum warranty months") Integer minMonths,
+            @RequestParam(required = false) @Parameter(description = "Maximum warranty months") Integer maxMonths,
+            @RequestParam(required = false) @Parameter(description = "Minimum warranty km") Integer minKm,
+            @RequestParam(required = false) @Parameter(description = "Maximum warranty km") Integer maxKm) {
+        try {
+            List<WarrantyPolicyResponse> policies;
+            if (minMonths != null || maxMonths != null) {
+                policies = warrantyPolicyService.getPoliciesByWarrantyMonths(minMonths, maxMonths);
+            } else if (minKm != null || maxKm != null) {
+                policies = warrantyPolicyService.getPoliciesByWarrantyKm(minKm, maxKm);
+            } else {
+                policies = warrantyPolicyService.getAllWarrantyPolicies(100, 0);
             }
             return ResponseEntity.ok(policies);
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve policies by coverage",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    @GetMapping("/by-vin/{vin}")
-    @Operation(summary = "Get warranty info by VIN (read-only)")
-    public ResponseEntity<?> getWarrantyInfoByVin(@PathVariable("vin") String vin) {
+    @GetMapping("/oem/{oemId}/analytics/comparison")
+    @Operation(summary = "Compare Policies by OEM", description = "Retrieve and compare all warranty policies for an OEM manufacturer.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Policy comparison retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
+    })
+    public ResponseEntity<?> comparePoliciesByOem(
+            @PathVariable @Parameter(description = "OEM Manufacturer ID", required = true, example = "1") Long oemId) {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            // Delegate to service to read from vehicle.warranty_info
-            java.time.LocalDate expiry = warrantyPolicyService.getWarrantyExpiryDate(vin, null);
-            boolean under = warrantyPolicyService.isVehicleUnderWarranty(vin);
-            return ResponseEntity.ok(Map.of("vin", vin, "underWarranty", under, "expiryDate", expiry));
+            List<WarrantyPolicyResponse> policies = warrantyPolicyService.comparePoliciesByOem(oemId);
+            return ResponseEntity.ok(policies);
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to compare policies",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    @GetMapping("/by-model/{model}")
-    @Operation(summary = "Get aggregated warranty info by model (read-only)")
-    public ResponseEntity<?> getWarrantyInfoByModel(@PathVariable("model") String model) {
+    @GetMapping("/oem/{oemId}/analytics/most-generous")
+    @Operation(summary = "Get Most Generous Policy by OEM", description = "Find the warranty policy with the most generous coverage terms for an OEM.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Most generous policy retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
+            @ApiResponse(responseCode = "404", description = "No active policies found for OEM", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+    })
+    public ResponseEntity<?> getMostGenerousPolicyByOem(
+            @PathVariable @Parameter(description = "OEM Manufacturer ID", required = true, example = "1") Long oemId) {
         try {
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            // For now return counts via policy service active list filtered by model name
-            // if any
-            java.util.List<org.example.models.core.WarrantyPolicy> policies = warrantyPolicyService
-                    .getPoliciesByModel(model, 1L);
-            return ResponseEntity.ok(Map.of("model", model, "policyCount", policies.size()));
+            WarrantyPolicyResponse response = warrantyPolicyService.getMostGenerousPolicyByOem(oemId);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            ApiErrorResponse error = ApiErrorResponse.notFound(e.getMessage(), "/api/warranty-policies");
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to retrieve most generous policy",
+                    "/api/warranty-policies");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 }

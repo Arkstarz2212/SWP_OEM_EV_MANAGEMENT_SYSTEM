@@ -2,115 +2,87 @@ package org.example.service.IService;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
-import org.example.models.core.WarrantyPolicy;
 import org.example.models.dto.request.WarrantyPolicyCreateRequest;
+import org.example.models.dto.response.WarrantyPolicyResponse;
 
+/**
+ * Service interface for Warranty Policy management
+ * Handles business logic for warranty policy operations
+ */
 public interface IWarrantyPolicyService {
-    // Policy Management
-    WarrantyPolicy createWarrantyPolicy(WarrantyPolicyCreateRequest request);
+    // CRUD Operations
+    WarrantyPolicyResponse createWarrantyPolicy(WarrantyPolicyCreateRequest request, Long oemId);
 
-    WarrantyPolicy updateWarrantyPolicy(Long policyId, WarrantyPolicyCreateRequest request);
+    WarrantyPolicyResponse getWarrantyPolicyById(Long policyId);
 
-    Optional<WarrantyPolicy> getPolicyById(Long policyId);
+    WarrantyPolicyResponse getWarrantyPolicyByCode(String policyCode);
 
-    List<WarrantyPolicy> getPoliciesByOem(Long oemId);
+    WarrantyPolicyResponse updateWarrantyPolicy(Long policyId, WarrantyPolicyCreateRequest request);
 
-    boolean activatePolicy(Long policyId);
+    boolean deleteWarrantyPolicy(Long policyId);
 
-    boolean deactivatePolicy(Long policyId, String reason);
+    // List and Search Operations
+    List<WarrantyPolicyResponse> getAllWarrantyPolicies(int limit, int offset);
 
-    // Vehicle Model and Component Coverage
-    List<WarrantyPolicy> getPoliciesByModel(String model, Long oemId);
+    List<WarrantyPolicyResponse> getWarrantyPoliciesByOem(Long oemId, int limit, int offset);
 
-    List<WarrantyPolicy> getPoliciesByComponent(String componentName, Long oemId);
+    List<WarrantyPolicyResponse> getActiveWarrantyPolicies(int limit, int offset);
 
-    WarrantyPolicy getPolicyForVehicleComponent(String model, String componentName, Integer modelYear, Long oemId);
+    List<WarrantyPolicyResponse> getActiveWarrantyPoliciesByOem(Long oemId, int limit, int offset);
 
-    boolean addComponentCoverage(Long policyId, String componentName, Integer monthsCoverage, Integer kmCoverage);
+    List<WarrantyPolicyResponse> searchWarrantyPolicies(String keyword, int limit, int offset);
 
-    boolean removeComponentCoverage(Long policyId, String componentName);
+    List<WarrantyPolicyResponse> searchWarrantyPoliciesByOem(Long oemId, String keyword, int limit, int offset);
 
-    // Warranty Validation and Eligibility
-    boolean validateWarranty(String vin, String componentSerial);
+    // Default Policy Management
+    WarrantyPolicyResponse getDefaultPolicyByOem(Long oemId);
 
-    boolean validateWarrantyByDetails(String model, Integer modelYear, String componentName,
-            LocalDate purchaseDate, Integer currentKm);
+    boolean setDefaultPolicy(Long policyId, Long oemId);
 
-    boolean isComponentUnderWarranty(String vin, String componentSerial);
+    boolean removeDefaultPolicy(Long policyId);
 
-    boolean isVehicleUnderWarranty(String vin);
+    // Status Management
+    boolean activateWarrantyPolicy(Long policyId);
 
-    LocalDate getWarrantyExpiryDate(String vin, String componentName);
+    boolean deactivateWarrantyPolicy(Long policyId, String reason);
 
-    // Exclusions and Conditions Management
-    boolean addWarrantyExclusion(Long policyId, String exclusionType, String description);
+    boolean updateWarrantyPolicyStatus(Long policyId, boolean isActive);
 
-    boolean removeWarrantyExclusion(Long policyId, String exclusionType);
+    // Effective Date Management
+    List<WarrantyPolicyResponse> getActivePoliciesForDate(LocalDate date);
 
-    List<String> getWarrantyExclusions(Long policyId);
+    List<WarrantyPolicyResponse> getExpiringPolicies(LocalDate beforeDate);
 
-    boolean checkExclusionApplies(String vin, String exclusionType);
+    List<WarrantyPolicyResponse> getPoliciesByEffectiveDateRange(LocalDate startDate, LocalDate endDate);
 
-    // Cost and Coverage Analysis
-    Double getMaxCoverageAmount(Long policyId, String componentName);
+    // Coverage Analysis
+    List<WarrantyPolicyResponse> getPoliciesByWarrantyMonths(Integer minMonths, Integer maxMonths);
 
-    Double calculateCoveragePercentage(String vin, String componentName, LocalDate claimDate);
+    List<WarrantyPolicyResponse> getPoliciesByWarrantyKm(Integer minKm, Integer maxKm);
 
-    boolean isClaimEligibleForCoverage(String vin, String componentName, Double claimAmount);
+    List<WarrantyPolicyResponse> getPoliciesByComponentCoverage(String component, Integer minMonths);
 
-    // Policy Templates and Standards
-    WarrantyPolicy createPolicyFromTemplate(String templateName, Long oemId);
+    // Validation and Business Rules
+    boolean validatePolicyCode(String policyCode, Long excludePolicyId);
 
-    List<String> getAvailableTemplates();
+    boolean validatePolicyDates(LocalDate effectiveFrom, LocalDate effectiveTo);
 
-    boolean updatePolicyTemplate(String templateName, WarrantyPolicyCreateRequest template);
+    boolean canDeletePolicy(Long policyId);
 
-    // EV-Specific Warranty Features
-    WarrantyPolicy createBatteryWarrantyPolicy(Long oemId, Integer yearsOrKm, Double degradationThreshold);
+    // Statistics and Analytics
+    Long countWarrantyPoliciesByOem(Long oemId);
 
-    WarrantyPolicy createMotorWarrantyPolicy(Long oemId, Integer yearsOrKm);
+    Long countActiveWarrantyPoliciesByOem(Long oemId);
 
-    WarrantyPolicy createInverterWarrantyPolicy(Long oemId, Integer yearsOrKm);
+    Double getAverageWarrantyMonthsByOem(Long oemId);
 
-    WarrantyPolicy createChargingSystemWarrantyPolicy(Long oemId, Integer yearsOrKm);
+    Double getAverageWarrantyKmByOem(Long oemId);
 
-    // Search and Discovery
-    List<WarrantyPolicy> searchPolicies(String searchQuery, String componentName, Long oemId);
+    // Policy Comparison and Analysis
+    List<WarrantyPolicyResponse> comparePoliciesByOem(Long oemId);
 
-    List<WarrantyPolicy> getActivePolicies(Long oemId);
+    WarrantyPolicyResponse getMostGenerousPolicyByOem(Long oemId);
 
-    List<WarrantyPolicy> getExpiredPolicies(Long oemId);
-
-    // Coverage Statistics and Analytics
-    Long getPolicyCountByOem(Long oemId);
-
-    Long getPolicyCountByComponent(String componentName, Long oemId);
-
-    List<WarrantyPolicy> getPoliciesWithUpcomingExpiry(int daysFromNow, Long oemId);
-
-    Double getAverageCoverageByComponent(String componentName, Long oemId);
-
-    // Compliance and Regulatory
-    boolean updateRegulatoryCompliance(Long policyId, String region, String complianceStandard);
-
-    List<String> getRegulatoryRequirements(String region);
-
-    boolean validatePolicyCompliance(Long policyId, String region);
-
-    // Integration and External Systems
-    boolean syncPolicyWithExternalSystem(Long policyId, String externalSystemId);
-
-    WarrantyPolicy getPolicyByExternalId(String externalId);
-
-    // Claim Support
-    List<WarrantyPolicy> getApplicablePoliciesForClaim(String vin, String componentName, LocalDate claimDate);
-
-    boolean approveCoverageForClaim(Long policyId, String vin, String componentName, Double amount);
-
-    // Warranty Extensions and Renewals
-    boolean extendWarrantyPeriod(Long policyId, String vin, Integer additionalMonths, String reason);
-
-    boolean offerWarrantyExtension(String vin, String componentName, Integer extensionMonths, Double cost);
+    WarrantyPolicyResponse getMostRestrictivePolicyByOem(Long oemId);
 }

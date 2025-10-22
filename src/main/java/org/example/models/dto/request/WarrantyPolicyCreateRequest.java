@@ -60,7 +60,6 @@ public class WarrantyPolicyCreateRequest {
         this.notes = notes;
     }
 
-    
     public String toString() {
         return "WarrantyPolicyCreateRequest{" +
                 "model='" + model + '\'' +

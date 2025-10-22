@@ -2,386 +2,530 @@ package org.example.service.Serviceimpl;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
-import org.example.models.core.Vehicle;
 import org.example.models.core.WarrantyPolicy;
 import org.example.models.dto.request.WarrantyPolicyCreateRequest;
-import org.example.models.json.WarrantyInfo;
-import org.example.repository.IRepository.IVehicleRepository;
+import org.example.models.dto.response.WarrantyPolicyResponse;
+import org.example.repository.IRepository.IWarrantyPolicyRepository;
 import org.example.service.IService.IWarrantyPolicyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Service implementation for Warranty Policy management
+ * Handles business logic for warranty policy operations
+ */
 @Service
+@Transactional
 public class WarrantyPolicyService implements IWarrantyPolicyService {
 
-    // Simple in-memory storage until repository is available
-    private final Map<Long, WarrantyPolicy> policies = new ConcurrentHashMap<>();
-    private final AtomicLong idSeq = new AtomicLong(1);
-
     @Autowired
-    private IVehicleRepository vehicleRepository;
+    private IWarrantyPolicyRepository warrantyPolicyRepository;
 
     @Override
-    public WarrantyPolicy createWarrantyPolicy(WarrantyPolicyCreateRequest request) {
-        if (request.getModel() == null || request.getComponentCategory() == null) {
-            throw new IllegalArgumentException("Model and componentCategory are required");
+    public WarrantyPolicyResponse createWarrantyPolicy(WarrantyPolicyCreateRequest request, Long oemId) {
+        // Validate policy code uniqueness
+        if (warrantyPolicyRepository.existsByPolicyCode(request.getModel() + "_" + request.getComponentCategory())) {
+            throw new IllegalArgumentException("Policy code already exists");
         }
-        WarrantyPolicy policy = new WarrantyPolicy(
-                request.getModel(),
-                request.getComponentCategory(),
-                request.getMonthsCoverage(),
-                request.getKmCoverage());
-        policy.setId(idSeq.getAndIncrement());
-        policy.setNotes(request.getNotes());
-        policies.put(policy.getId(), policy);
-        return policy;
+
+        // Create new warranty policy
+        WarrantyPolicy policy = new WarrantyPolicy();
+        policy.setOemId(oemId);
+        policy.setPolicyName(request.getModel() + " - " + request.getComponentCategory());
+        policy.setPolicyCode(request.getModel() + "_" + request.getComponentCategory());
+
+        // Map to database fields
+        policy.setWarrantyPeriodMonths(request.getMonthsCoverage());
+        policy.setWarrantyKmLimit(request.getKmCoverage());
+
+        // Set coverage details as JSON
+        String category = request.getComponentCategory().toLowerCase();
+        String coverageJson = String.format("""
+                {
+                    "%s": {
+                        "months": %d,
+                        "km": %d,
+                        "service_coverage": "free",
+                        "parts_coverage": "free",
+                        "conditions": ["normal_use"]
+                    }
+                }
+                """, category, request.getMonthsCoverage(), request.getKmCoverage());
+        policy.setCoverageDetails(coverageJson);
+
+        policy.setIsActive(true);
+        policy.setIsDefault(false);
+        policy.setEffectiveFrom(LocalDate.now());
+        policy.setEffectiveTo(LocalDate.now().plusYears(10)); // Default 10 years validity
+        policy.setCreatedAt(OffsetDateTime.now());
+        policy.setUpdatedAt(OffsetDateTime.now());
+
+        WarrantyPolicy savedPolicy = warrantyPolicyRepository.save(policy);
+        return convertToResponse(savedPolicy);
     }
 
     @Override
-    public WarrantyPolicy updateWarrantyPolicy(Long policyId, WarrantyPolicyCreateRequest request) {
-        WarrantyPolicy existing = policies.get(policyId);
-        if (existing == null) {
-            throw new RuntimeException("Policy not found");
+    public WarrantyPolicyResponse getWarrantyPolicyById(Long policyId) {
+        Optional<WarrantyPolicy> policy = warrantyPolicyRepository.findById(policyId);
+        if (policy.isPresent()) {
+            return convertToResponse(policy.get());
         }
-        if (request.getModel() != null)
-            existing.setModel(request.getModel());
-        if (request.getComponentCategory() != null)
-            existing.setComponentCategory(request.getComponentCategory());
-        if (request.getMonthsCoverage() != null)
-            existing.setMonthsCoverage(request.getMonthsCoverage());
-        if (request.getKmCoverage() != null)
-            existing.setKmCoverage(request.getKmCoverage());
-        if (request.getNotes() != null)
-            existing.setNotes(request.getNotes());
-        policies.put(policyId, existing);
-        return existing;
+        throw new IllegalArgumentException("Warranty policy not found with ID: " + policyId);
     }
 
     @Override
-    public Optional<WarrantyPolicy> getPolicyById(Long policyId) {
-        return Optional.ofNullable(policies.get(policyId));
-    }
-
-    @Override
-    public List<WarrantyPolicy> getPoliciesByOem(Long oemId) {
-        // No OEM relation on model; return all for now
-        return new ArrayList<>(policies.values());
-    }
-
-    @Override
-    public boolean activatePolicy(Long policyId) {
-        // No active flag on model; consider activation as existence
-        return policies.containsKey(policyId);
-    }
-
-    @Override
-    public boolean deactivatePolicy(Long policyId, String reason) {
-        // Without a status flag, simulate deactivation by removing
-        return policies.remove(policyId) != null;
-    }
-
-    @Override
-    public List<WarrantyPolicy> getPoliciesByModel(String model, Long oemId) {
-        return policies.values().stream()
-                .filter(p -> model.equals(p.getModel()))
-                .toList();
-    }
-
-    @Override
-    public List<WarrantyPolicy> getPoliciesByComponent(String componentName, Long oemId) {
-        return policies.values().stream()
-                .filter(p -> componentName.equals(p.getComponentCategory()))
-                .toList();
-    }
-
-    @Override
-    public WarrantyPolicy getPolicyForVehicleComponent(String model, String componentName, Integer modelYear,
-            Long oemId) {
-        return policies.values().stream()
-                .filter(p -> model.equals(p.getModel()) && componentName.equals(p.getComponentCategory()))
-                .findFirst()
-                .orElse(null);
-    }
-
-    @Override
-    public boolean addComponentCoverage(Long policyId, String componentName, Integer monthsCoverage,
-            Integer kmCoverage) {
-        WarrantyPolicy policy = policies.get(policyId);
-        if (policy == null)
-            return false;
-        policy.setComponentCategory(componentName);
-        if (monthsCoverage != null)
-            policy.setMonthsCoverage(monthsCoverage);
-        if (kmCoverage != null)
-            policy.setKmCoverage(kmCoverage);
-        return true;
-    }
-
-    @Override
-    public boolean removeComponentCoverage(Long policyId, String componentName) {
-        WarrantyPolicy policy = policies.get(policyId);
-        if (policy == null)
-            return false;
-        if (componentName != null && componentName.equals(policy.getComponentCategory())) {
-            policy.setComponentCategory(null);
-            return true;
+    public WarrantyPolicyResponse getWarrantyPolicyByCode(String policyCode) {
+        Optional<WarrantyPolicy> policy = warrantyPolicyRepository.findByPolicyCode(policyCode);
+        if (policy.isPresent()) {
+            return convertToResponse(policy.get());
         }
-        return false;
+        throw new IllegalArgumentException("Warranty policy not found with code: " + policyCode);
     }
 
     @Override
-    public boolean validateWarranty(String vin, String componentSerial) {
-        if (vin == null)
-            return false;
-        java.util.Optional<Vehicle> opt = vehicleRepository.findByVin(vin);
-        if (opt.isEmpty())
-            return false;
-        Vehicle v = opt.get();
-        WarrantyInfo info = v.getWarrantyInfo();
-        if (info == null)
-            return false;
-        OffsetDateTime now = OffsetDateTime.now();
-        boolean withinDates = true;
-        if (info.getStartDate() != null && info.getEndDate() != null) {
-            OffsetDateTime start = info.getStartDate().atStartOfDay().atOffset(now.getOffset());
-            OffsetDateTime end = info.getEndDate().plusDays(1).atStartOfDay().atOffset(now.getOffset());
-            withinDates = !now.isBefore(start) && now.isBefore(end);
+    public WarrantyPolicyResponse updateWarrantyPolicy(Long policyId, WarrantyPolicyCreateRequest request) {
+        Optional<WarrantyPolicy> existingPolicyOpt = warrantyPolicyRepository.findById(policyId);
+        if (existingPolicyOpt.isEmpty()) {
+            throw new IllegalArgumentException("Warranty policy not found with ID: " + policyId);
         }
-        boolean withinKm = true;
-        if (info.getKmLimit() != null && v.getVehicleData() != null && v.getVehicleData().getOdometerKm() != null) {
-            withinKm = v.getVehicleData().getOdometerKm() <= info.getKmLimit();
+
+        WarrantyPolicy existingPolicy = existingPolicyOpt.get();
+
+        // Update policy details
+        existingPolicy.setPolicyName(request.getModel() + " - " + request.getComponentCategory());
+        existingPolicy.setWarrantyPeriodMonths(request.getMonthsCoverage());
+        existingPolicy.setWarrantyKmLimit(request.getKmCoverage());
+        existingPolicy.setUpdatedAt(OffsetDateTime.now());
+
+        // Update coverage details as JSON
+        String category = request.getComponentCategory().toLowerCase();
+        String coverageJson = String.format("""
+                {
+                    "%s": {
+                        "months": %d,
+                        "km": %d,
+                        "service_coverage": "free",
+                        "parts_coverage": "free",
+                        "conditions": ["normal_use"]
+                    }
+                }
+                """, category, request.getMonthsCoverage(), request.getKmCoverage());
+        existingPolicy.setCoverageDetails(coverageJson);
+
+        WarrantyPolicy updatedPolicy = warrantyPolicyRepository.save(existingPolicy);
+        return convertToResponse(updatedPolicy);
+    }
+
+    @Override
+    public boolean deleteWarrantyPolicy(Long policyId) {
+        if (!warrantyPolicyRepository.existsById(policyId)) {
+            throw new IllegalArgumentException("Warranty policy not found with ID: " + policyId);
         }
-        return withinDates && withinKm;
-    }
 
-    @Override
-    public boolean validateWarrantyByDetails(String model, Integer modelYear, String componentName,
-            LocalDate purchaseDate,
-            Integer currentKm) {
-        // Use stored policies if present; otherwise fallback to
-        // vehicle.warranty_info-based simple decision
-        boolean policyMatch = policies.values().stream()
-                .filter(p -> model != null && model.equals(p.getModel())
-                        && componentName != null && componentName.equals(p.getComponentCategory()))
-                .anyMatch(p -> currentKm == null || p.getKmCoverage() == null || currentKm <= p.getKmCoverage());
-        if (policyMatch)
-            return true;
-        // Fallback minimal check: if currentKm is not excessive, allow
-        return currentKm == null || currentKm <= 200000;
-    }
-
-    @Override
-    public boolean isComponentUnderWarranty(String vin, String componentSerial) {
-        // Placeholder
-        return true;
-    }
-
-    @Override
-    public boolean isVehicleUnderWarranty(String vin) {
-        if (vin == null)
-            return false;
-        java.util.Optional<Vehicle> opt = vehicleRepository.findByVin(vin);
-        if (opt.isEmpty())
-            return false;
-        Vehicle v = opt.get();
-        WarrantyInfo info = v.getWarrantyInfo();
-        if (info == null)
-            return false;
-        OffsetDateTime now = OffsetDateTime.now();
-        if (info.getStartDate() != null && info.getEndDate() != null) {
-            OffsetDateTime start = info.getStartDate().atStartOfDay().atOffset(now.getOffset());
-            OffsetDateTime end = info.getEndDate().plusDays(1).atStartOfDay().atOffset(now.getOffset());
-            return !now.isBefore(start) && now.isBefore(end);
+        // Check if policy can be deleted (business rules)
+        if (!canDeletePolicy(policyId)) {
+            throw new IllegalStateException(
+                    "Cannot delete policy: it may be referenced by active claims or is the default policy");
         }
+
+        warrantyPolicyRepository.deleteById(policyId);
         return true;
     }
 
     @Override
-    public LocalDate getWarrantyExpiryDate(String vin, String componentName) {
-        if (vin == null)
-            return null;
-        java.util.Optional<Vehicle> opt = vehicleRepository.findByVin(vin);
-        if (opt.isEmpty())
-            return null;
-        Vehicle v = opt.get();
-        WarrantyInfo info = v.getWarrantyInfo();
-        return info != null ? info.getEndDate() : null;
+    public List<WarrantyPolicyResponse> getAllWarrantyPolicies(int limit, int offset) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findAll();
+        return policies.stream()
+                .skip(offset)
+                .limit(limit)
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public boolean addWarrantyExclusion(Long policyId, String exclusionType, String description) {
-        // Placeholder: no exclusions relation persisted
-        return policies.containsKey(policyId);
+    public List<WarrantyPolicyResponse> getWarrantyPoliciesByOem(Long oemId, int limit, int offset) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findByOemId(oemId);
+        return policies.stream()
+                .skip(offset)
+                .limit(limit)
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public boolean removeWarrantyExclusion(Long policyId, String exclusionType) {
-        return policies.containsKey(policyId);
+    public List<WarrantyPolicyResponse> getActiveWarrantyPolicies(int limit, int offset) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findAllActive();
+        return policies.stream()
+                .skip(offset)
+                .limit(limit)
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<String> getWarrantyExclusions(Long policyId) {
-        return List.of();
+    public List<WarrantyPolicyResponse> getActiveWarrantyPoliciesByOem(Long oemId, int limit, int offset) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findByOemIdAndIsActive(oemId, true);
+        return policies.stream()
+                .skip(offset)
+                .limit(limit)
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public boolean checkExclusionApplies(String vin, String exclusionType) {
-        return false;
+    public List<WarrantyPolicyResponse> searchWarrantyPolicies(String keyword, int limit, int offset) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.searchPolicies(keyword);
+        return policies.stream()
+                .skip(offset)
+                .limit(limit)
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Double getMaxCoverageAmount(Long policyId, String componentName) {
-        return null;
+    public List<WarrantyPolicyResponse> searchWarrantyPoliciesByOem(Long oemId, String keyword, int limit, int offset) {
+        List<WarrantyPolicy> allPolicies = warrantyPolicyRepository.findByOemId(oemId);
+        List<WarrantyPolicy> filteredPolicies = allPolicies.stream()
+                .filter(policy -> policy.getPolicyName().toLowerCase().contains(keyword.toLowerCase()) ||
+                        policy.getPolicyCode().toLowerCase().contains(keyword.toLowerCase()))
+                .collect(Collectors.toList());
+
+        return filteredPolicies.stream()
+                .skip(offset)
+                .limit(limit)
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Double calculateCoveragePercentage(String vin, String componentName, LocalDate claimDate) {
-        return null;
+    public WarrantyPolicyResponse getDefaultPolicyByOem(Long oemId) {
+        Optional<WarrantyPolicy> defaultPolicy = warrantyPolicyRepository.findByIsDefaultAndOemId(true, oemId);
+        if (defaultPolicy.isPresent()) {
+            return convertToResponse(defaultPolicy.get());
+        }
+        throw new IllegalArgumentException("No default policy found for OEM ID: " + oemId);
     }
 
     @Override
-    public boolean isClaimEligibleForCoverage(String vin, String componentName, Double claimAmount) {
+    public boolean setDefaultPolicy(Long policyId, Long oemId) {
+        Optional<WarrantyPolicy> policyOpt = warrantyPolicyRepository.findById(policyId);
+        if (policyOpt.isEmpty()) {
+            throw new IllegalArgumentException("Warranty policy not found with ID: " + policyId);
+        }
+
+        WarrantyPolicy policy = policyOpt.get();
+
+        // Remove default status from other policies of the same OEM
+        List<WarrantyPolicy> existingDefaults = warrantyPolicyRepository.findByIsDefaultAndOemId(true, oemId).stream()
+                .filter(p -> !p.getId().equals(policyId))
+                .collect(Collectors.toList());
+
+        for (WarrantyPolicy existingDefault : existingDefaults) {
+            existingDefault.setIsDefault(false);
+            warrantyPolicyRepository.save(existingDefault);
+        }
+
+        // Set this policy as default
+        policy.setIsDefault(true);
+        policy.setUpdatedAt(OffsetDateTime.now());
+        warrantyPolicyRepository.save(policy);
+
         return true;
     }
 
     @Override
-    public WarrantyPolicy createPolicyFromTemplate(String templateName, Long oemId) {
-        // Placeholder template logic
-        WarrantyPolicyCreateRequest req = new WarrantyPolicyCreateRequest("GenericModel", templateName, 24, 50000);
-        return createWarrantyPolicy(req);
-    }
+    public boolean removeDefaultPolicy(Long policyId) {
+        Optional<WarrantyPolicy> policyOpt = warrantyPolicyRepository.findById(policyId);
+        if (policyOpt.isEmpty()) {
+            throw new IllegalArgumentException("Warranty policy not found with ID: " + policyId);
+        }
 
-    @Override
-    public List<String> getAvailableTemplates() {
-        return List.of("Battery", "Motor", "Inverter", "ChargingSystem");
-    }
+        WarrantyPolicy policy = policyOpt.get();
+        policy.setIsDefault(false);
+        policy.setUpdatedAt(OffsetDateTime.now());
+        warrantyPolicyRepository.save(policy);
 
-    @Override
-    public boolean updatePolicyTemplate(String templateName, WarrantyPolicyCreateRequest template) {
         return true;
     }
 
     @Override
-    public WarrantyPolicy createBatteryWarrantyPolicy(Long oemId, Integer yearsOrKm, Double degradationThreshold) {
-        WarrantyPolicyCreateRequest req = new WarrantyPolicyCreateRequest("GenericModel", "Battery", yearsOrKm,
-                yearsOrKm);
-        return createWarrantyPolicy(req);
+    public boolean activateWarrantyPolicy(Long policyId) {
+        return updateWarrantyPolicyStatus(policyId, true);
     }
 
     @Override
-    public WarrantyPolicy createMotorWarrantyPolicy(Long oemId, Integer yearsOrKm) {
-        WarrantyPolicyCreateRequest req = new WarrantyPolicyCreateRequest("GenericModel", "Motor", yearsOrKm,
-                yearsOrKm);
-        return createWarrantyPolicy(req);
+    public boolean deactivateWarrantyPolicy(Long policyId, String reason) {
+        return updateWarrantyPolicyStatus(policyId, false);
     }
 
     @Override
-    public WarrantyPolicy createInverterWarrantyPolicy(Long oemId, Integer yearsOrKm) {
-        WarrantyPolicyCreateRequest req = new WarrantyPolicyCreateRequest("GenericModel", "Inverter", yearsOrKm,
-                yearsOrKm);
-        return createWarrantyPolicy(req);
-    }
+    public boolean updateWarrantyPolicyStatus(Long policyId, boolean isActive) {
+        Optional<WarrantyPolicy> policyOpt = warrantyPolicyRepository.findById(policyId);
+        if (policyOpt.isEmpty()) {
+            throw new IllegalArgumentException("Warranty policy not found with ID: " + policyId);
+        }
 
-    @Override
-    public WarrantyPolicy createChargingSystemWarrantyPolicy(Long oemId, Integer yearsOrKm) {
-        WarrantyPolicyCreateRequest req = new WarrantyPolicyCreateRequest("GenericModel", "ChargingSystem", yearsOrKm,
-                yearsOrKm);
-        return createWarrantyPolicy(req);
-    }
+        WarrantyPolicy policy = policyOpt.get();
+        policy.setIsActive(isActive);
+        policy.setUpdatedAt(OffsetDateTime.now());
+        warrantyPolicyRepository.save(policy);
 
-    @Override
-    public List<WarrantyPolicy> searchPolicies(String searchQuery, String componentName, Long oemId) {
-        return policies.values().stream()
-                .filter(p -> (searchQuery == null || p.getModel().toLowerCase().contains(searchQuery.toLowerCase()))
-                        && (componentName == null || componentName.equals(p.getComponentCategory())))
-                .toList();
-    }
-
-    @Override
-    public List<WarrantyPolicy> getActivePolicies(Long oemId) {
-        return new ArrayList<>(policies.values());
-    }
-
-    @Override
-    public List<WarrantyPolicy> getExpiredPolicies(Long oemId) {
-        return List.of();
-    }
-
-    @Override
-    public Long getPolicyCountByOem(Long oemId) {
-        return (long) policies.size();
-    }
-
-    @Override
-    public Long getPolicyCountByComponent(String componentName, Long oemId) {
-        return policies.values().stream().filter(p -> componentName.equals(p.getComponentCategory())).count();
-    }
-
-    @Override
-    public List<WarrantyPolicy> getPoliciesWithUpcomingExpiry(int daysFromNow, Long oemId) {
-        return List.of();
-    }
-
-    @Override
-    public Double getAverageCoverageByComponent(String componentName, Long oemId) {
-        return null;
-    }
-
-    @Override
-    public boolean updateRegulatoryCompliance(Long policyId, String region, String complianceStandard) {
-        return policies.containsKey(policyId);
-    }
-
-    @Override
-    public List<String> getRegulatoryRequirements(String region) {
-        return List.of();
-    }
-
-    @Override
-    public boolean validatePolicyCompliance(Long policyId, String region) {
         return true;
     }
 
     @Override
-    public boolean syncPolicyWithExternalSystem(Long policyId, String externalSystemId) {
-        return true;
+    public List<WarrantyPolicyResponse> getActivePoliciesForDate(LocalDate date) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findActivePoliciesForDate(date);
+        return policies.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public WarrantyPolicy getPolicyByExternalId(String externalId) {
-        return null;
+    public List<WarrantyPolicyResponse> getExpiringPolicies(LocalDate beforeDate) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findExpiringPolicies(beforeDate);
+        return policies.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public List<WarrantyPolicy> getApplicablePoliciesForClaim(String vin, String componentName, LocalDate claimDate) {
-        return new ArrayList<>(policies.values());
+    public List<WarrantyPolicyResponse> getPoliciesByEffectiveDateRange(LocalDate startDate, LocalDate endDate) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findByEffectiveFromBetween(startDate, endDate);
+        return policies.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public boolean approveCoverageForClaim(Long policyId, String vin, String componentName, Double amount) {
-        return policies.containsKey(policyId);
+    public List<WarrantyPolicyResponse> getPoliciesByWarrantyMonths(Integer minMonths, Integer maxMonths) {
+        List<WarrantyPolicy> policies;
+        if (minMonths != null && maxMonths != null) {
+            policies = warrantyPolicyRepository.findByWarrantyMonthsBetween(minMonths, maxMonths);
+        } else if (minMonths != null) {
+            policies = warrantyPolicyRepository.findByWarrantyMonthsGreaterThanEqual(minMonths);
+        } else {
+            policies = warrantyPolicyRepository.findAll();
+        }
+
+        return policies.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public boolean extendWarrantyPeriod(Long policyId, String vin, Integer additionalMonths, String reason) {
-        WarrantyPolicy policy = policies.get(policyId);
-        if (policy == null)
+    public List<WarrantyPolicyResponse> getPoliciesByWarrantyKm(Integer minKm, Integer maxKm) {
+        List<WarrantyPolicy> policies;
+        if (minKm != null && maxKm != null) {
+            policies = warrantyPolicyRepository.findByWarrantyKmBetween(minKm, maxKm);
+        } else if (minKm != null) {
+            policies = warrantyPolicyRepository.findByWarrantyKmGreaterThanEqual(minKm);
+        } else {
+            policies = warrantyPolicyRepository.findAll();
+        }
+
+        return policies.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<WarrantyPolicyResponse> getPoliciesByComponentCoverage(String component, Integer minMonths) {
+        List<WarrantyPolicy> policies;
+        String componentLower = component.toLowerCase();
+
+        if (componentLower.contains("battery")) {
+            policies = warrantyPolicyRepository.findByBatteryCoverageMonthsGreaterThanEqual(minMonths);
+        } else if (componentLower.contains("motor")) {
+            policies = warrantyPolicyRepository.findByMotorCoverageMonthsGreaterThanEqual(minMonths);
+        } else if (componentLower.contains("inverter")) {
+            policies = warrantyPolicyRepository.findByInverterCoverageMonthsGreaterThanEqual(minMonths);
+        } else {
+            policies = warrantyPolicyRepository.findAll();
+        }
+
+        return policies.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean validatePolicyCode(String policyCode, Long excludePolicyId) {
+        Optional<WarrantyPolicy> existingPolicy = warrantyPolicyRepository.findByPolicyCode(policyCode);
+        if (existingPolicy.isPresent() && !existingPolicy.get().getId().equals(excludePolicyId)) {
+            return false; // Code already exists
+        }
+        return true; // Code is available
+    }
+
+    @Override
+    public boolean validatePolicyDates(LocalDate effectiveFrom, LocalDate effectiveTo) {
+        if (effectiveFrom == null || effectiveTo == null) {
+            return true; // Allow null dates
+        }
+        return !effectiveFrom.isAfter(effectiveTo); // From should not be after To
+    }
+
+    @Override
+    public boolean canDeletePolicy(Long policyId) {
+        Optional<WarrantyPolicy> policyOpt = warrantyPolicyRepository.findById(policyId);
+        if (policyOpt.isEmpty()) {
             return false;
-        if (additionalMonths != null)
-            policy.setMonthsCoverage(
-                    (policy.getMonthsCoverage() == null ? 0 : policy.getMonthsCoverage()) + additionalMonths);
+        }
+
+        WarrantyPolicy policy = policyOpt.get();
+
+        // Cannot delete if it's the default policy
+        if (Boolean.TRUE.equals(policy.getIsDefault())) {
+            return false;
+        }
+
+        // Add more business rules here (e.g., check if referenced by active claims)
         return true;
     }
 
     @Override
-    public boolean offerWarrantyExtension(String vin, String componentName, Integer extensionMonths, Double cost) {
-        return true;
+    public Long countWarrantyPoliciesByOem(Long oemId) {
+        return warrantyPolicyRepository.countByOemId(oemId);
+    }
+
+    @Override
+    public Long countActiveWarrantyPoliciesByOem(Long oemId) {
+        return warrantyPolicyRepository.countByOemIdAndIsActive(oemId, true);
+    }
+
+    @Override
+    public Double getAverageWarrantyMonthsByOem(Long oemId) {
+        return warrantyPolicyRepository.averageWarrantyMonthsByOem(oemId);
+    }
+
+    @Override
+    public Double getAverageWarrantyKmByOem(Long oemId) {
+        return warrantyPolicyRepository.averageWarrantyKmByOem(oemId);
+    }
+
+    @Override
+    public List<WarrantyPolicyResponse> comparePoliciesByOem(Long oemId) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findByOemId(oemId);
+        return policies.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public WarrantyPolicyResponse getMostGenerousPolicyByOem(Long oemId) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findByOemIdAndIsActive(oemId, true);
+        if (policies.isEmpty()) {
+            throw new IllegalArgumentException("No active policies found for OEM ID: " + oemId);
+        }
+
+        WarrantyPolicy mostGenerous = policies.stream()
+                .max((p1, p2) -> {
+                    int months1 = p1.getWarrantyMonths() != null ? p1.getWarrantyMonths() : 0;
+                    int months2 = p2.getWarrantyMonths() != null ? p2.getWarrantyMonths() : 0;
+                    int km1 = p1.getWarrantyKm() != null ? p1.getWarrantyKm() : 0;
+                    int km2 = p2.getWarrantyKm() != null ? p2.getWarrantyKm() : 0;
+
+                    // Compare by months first, then by km
+                    int monthsCompare = Integer.compare(months1, months2);
+                    return monthsCompare != 0 ? monthsCompare : Integer.compare(km1, km2);
+                })
+                .orElse(policies.get(0));
+
+        return convertToResponse(mostGenerous);
+    }
+
+    @Override
+    public WarrantyPolicyResponse getMostRestrictivePolicyByOem(Long oemId) {
+        List<WarrantyPolicy> policies = warrantyPolicyRepository.findByOemIdAndIsActive(oemId, true);
+        if (policies.isEmpty()) {
+            throw new IllegalArgumentException("No active policies found for OEM ID: " + oemId);
+        }
+
+        WarrantyPolicy mostRestrictive = policies.stream()
+                .min((p1, p2) -> {
+                    int months1 = p1.getWarrantyMonths() != null ? p1.getWarrantyMonths() : Integer.MAX_VALUE;
+                    int months2 = p2.getWarrantyMonths() != null ? p2.getWarrantyMonths() : Integer.MAX_VALUE;
+                    int km1 = p1.getWarrantyKm() != null ? p1.getWarrantyKm() : Integer.MAX_VALUE;
+                    int km2 = p2.getWarrantyKm() != null ? p2.getWarrantyKm() : Integer.MAX_VALUE;
+
+                    // Compare by months first, then by km
+                    int monthsCompare = Integer.compare(months1, months2);
+                    return monthsCompare != 0 ? monthsCompare : Integer.compare(km1, km2);
+                })
+                .orElse(policies.get(0));
+
+        return convertToResponse(mostRestrictive);
+    }
+
+    /**
+     * Convert WarrantyPolicy entity to WarrantyPolicyResponse DTO
+     */
+    private WarrantyPolicyResponse convertToResponse(WarrantyPolicy policy) {
+        WarrantyPolicyResponse response = new WarrantyPolicyResponse();
+
+        // Basic fields
+        response.setId(policy.getId());
+        response.setOemId(policy.getOemId());
+        response.setPolicyName(policy.getPolicyName());
+        response.setPolicyCode(policy.getPolicyCode());
+        response.setDescription(policy.getDescription());
+
+        // Warranty coverage fields
+        response.setWarrantyPeriodMonths(policy.getWarrantyPeriodMonths());
+        response.setWarrantyKmLimit(policy.getWarrantyKmLimit());
+
+        // Coverage details (JSON)
+        response.setCoverageDetails(policy.getCoverageDetails());
+
+        // Status fields
+        response.setIsActive(policy.getIsActive());
+        response.setIsDefault(policy.getIsDefault());
+
+        // Effective dates
+        response.setEffectiveFrom(policy.getEffectiveFrom());
+        response.setEffectiveTo(policy.getEffectiveTo());
+
+        // Timestamps
+        response.setCreatedAt(policy.getCreatedAt());
+        response.setCreatedByUserId(policy.getCreatedByUserId());
+        response.setUpdatedAt(policy.getUpdatedAt());
+        response.setUpdatedByUserId(policy.getUpdatedByUserId());
+
+        // Legacy fields for backward compatibility
+        response.setModel(extractModelFromPolicyName(policy.getPolicyName()));
+        response.setComponentCategory(extractCategoryFromPolicyName(policy.getPolicyName()));
+        response.setMonthsCoverage(policy.getWarrantyPeriodMonths());
+        response.setKmCoverage(policy.getWarrantyKmLimit());
+        response.setNotes("Policy: " + policy.getPolicyName() +
+                (Boolean.TRUE.equals(policy.getIsDefault()) ? " (Default)" : "") +
+                (Boolean.TRUE.equals(policy.getIsActive()) ? " (Active)" : " (Inactive)"));
+
+        return response;
+    }
+
+    /**
+     * Extract model name from policy name
+     */
+    private String extractModelFromPolicyName(String policyName) {
+        if (policyName == null || !policyName.contains(" - ")) {
+            return "Unknown";
+        }
+        return policyName.split(" - ")[0];
+    }
+
+    /**
+     * Extract component category from policy name
+     */
+    private String extractCategoryFromPolicyName(String policyName) {
+        if (policyName == null || !policyName.contains(" - ")) {
+            return "General";
+        }
+        return policyName.split(" - ")[1];
     }
 }
