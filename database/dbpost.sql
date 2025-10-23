@@ -94,6 +94,60 @@ CREATE TABLE IF NOT EXISTS aoem.vehicles (
 -- Dropped per scope reduction: no per-vehicle part serial tracking
 
 -- ============================================================================
+-- 8. WARRANTY POLICIES
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS aoem.warranty_policies (
+    id SERIAL PRIMARY KEY,
+    oem_id INTEGER NOT NULL REFERENCES aoem.oem_manufacturers(id),
+    policy_name VARCHAR(200) NOT NULL,
+    policy_code VARCHAR(50) NOT NULL,
+    
+    -- Thời gian bảo hành
+    warranty_months INTEGER NOT NULL DEFAULT 36,
+    warranty_km INTEGER NULL,
+    
+    -- Chi tiết coverage (JSON đơn giản)
+    battery_coverage_months INTEGER DEFAULT 36,
+    battery_coverage_km INTEGER NULL,
+    motor_coverage_months INTEGER DEFAULT 36,
+    motor_coverage_km INTEGER NULL,
+    inverter_coverage_months INTEGER DEFAULT 24,
+    inverter_coverage_km INTEGER NULL,
+    
+    -- Trạng thái
+    is_active BOOLEAN DEFAULT TRUE,
+    is_default BOOLEAN DEFAULT FALSE,
+    
+    -- Thời gian hiệu lực
+    effective_from DATE NOT NULL DEFAULT CURRENT_DATE,
+    effective_to DATE NULL,
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP NULL
+);
+
+-- ============================================================================
+-- 8b. VEHICLE WARRANTY (Áp dụng chính sách cho xe)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS aoem.vehicle_warranties (
+    id SERIAL PRIMARY KEY,
+    vehicle_id INTEGER NOT NULL REFERENCES aoem.vehicles(id),
+    warranty_policy_id INTEGER NOT NULL REFERENCES aoem.warranty_policies(id),
+    
+    -- Thời gian bảo hành của xe này
+    warranty_start_date DATE NOT NULL,
+    warranty_end_date DATE NOT NULL,
+    
+    -- Trạng thái
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT NOW(),
+    created_by_user_id INTEGER REFERENCES aoem.users(id)
+);
+
+-- ============================================================================
 -- 9. WARRANTY CLAIMS
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS aoem.warranty_claims (
@@ -141,6 +195,21 @@ CREATE TABLE IF NOT EXISTS aoem.service_records (
     result TEXT NULL,
     handover_at TIMESTAMP NULL
 );
+
+-- ============================================================================
+-- INDEXES FOR PERFORMANCE
+-- ============================================================================
+
+-- Warranty Policies indexes
+CREATE INDEX IF NOT EXISTS idx_warranty_policies_oem ON aoem.warranty_policies(oem_id);
+CREATE INDEX IF NOT EXISTS idx_warranty_policies_active ON aoem.warranty_policies(is_active);
+CREATE INDEX IF NOT EXISTS idx_warranty_policies_default ON aoem.warranty_policies(oem_id, is_default) WHERE is_default = TRUE;
+CREATE INDEX IF NOT EXISTS idx_warranty_policies_effective_dates ON aoem.warranty_policies(effective_from, effective_to);
+
+-- Vehicle Warranties indexes
+CREATE INDEX IF NOT EXISTS idx_vehicle_warranties_vehicle ON aoem.vehicle_warranties(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_warranties_active ON aoem.vehicle_warranties(is_active);
+CREATE INDEX IF NOT EXISTS idx_vehicle_warranties_policy ON aoem.vehicle_warranties(warranty_policy_id);
 
 -- ============================================================================
 -- SAMPLE DATA (minimal, validated for use cases)
@@ -208,6 +277,38 @@ INSERT INTO aoem.parts_catalog (oem_id, part_number, name, category, part_data) 
 (2, 'BYD-MOT-HAN-001', 'Han EV Motor 163kW', 'motor', '{"description":"Permanent magnet motor","vehicle_models":["Han EV"],"unit_cost":2800,"manufacturer":"BYD"}')
 ON CONFLICT (part_number) DO NOTHING;
 
+-- 8. WARRANTY POLICIES
+INSERT INTO aoem.warranty_policies (
+    oem_id, policy_name, policy_code,
+    warranty_months, warranty_km,
+    battery_coverage_months, battery_coverage_km,
+    motor_coverage_months, motor_coverage_km,
+    inverter_coverage_months, inverter_coverage_km,
+    is_default
+) VALUES 
+-- Chính sách bảo hành VinFast
+(1, 'VinFast Standard Warranty', 'VFS-STD-2024',
+    96, 160000,
+    96, 160000,  -- Battery: 8 năm / 160k km
+    60, 100000,  -- Motor: 5 năm / 100k km  
+    36, 80000,   -- Inverter: 3 năm / 80k km
+    TRUE),
+-- Chính sách bảo hành BYD
+(2, 'BYD Standard Warranty', 'BYD-STD-2024',
+    72, 120000,
+    72, 120000,  -- Battery: 6 năm / 120k km
+    48, 80000,   -- Motor: 4 năm / 80k km
+    36, 60000,   -- Inverter: 3 năm / 60k km
+    TRUE);
+
+-- 8b. VEHICLE WARRANTY APPLICATIONS
+INSERT INTO aoem.vehicle_warranties (
+    vehicle_id, warranty_policy_id, warranty_start_date, warranty_end_date, created_by_user_id
+) VALUES 
+(1, 1, '2024-01-15', '2032-01-15', 4), -- VF8
+(2, 1, '2024-03-10', '2032-03-10', 4), -- VF9
+(3, 2, '2024-02-20', '2030-02-20', 4); -- BYD Han
+
 -- [REMOVED] VEHICLE COMPONENTS seed
 
 -- 9. WARRANTY CLAIMS
@@ -233,3 +334,10 @@ ON CONFLICT DO NOTHING;
 INSERT INTO aoem.service_records (vehicle_id, service_center_id, claim_id, technician_id, service_type, description, performed_at, result, handover_at) VALUES
 (1, 1, 1, 6, 'warranty', 'Replace main battery under warranty', '2024-12-02T09:00:00Z', 'Battery replaced, BMS reset, test drive OK', '2024-12-02T16:00:00Z')
 ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- COMMENTS AND DOCUMENTATION
+-- ============================================================================
+
+COMMENT ON TABLE aoem.warranty_policies IS 'Chính sách bảo hành của các OEM';
+COMMENT ON TABLE aoem.vehicle_warranties IS 'Áp dụng chính sách bảo hành cho từng xe cụ thể';
