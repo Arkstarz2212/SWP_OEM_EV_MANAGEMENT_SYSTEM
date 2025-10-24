@@ -24,45 +24,45 @@ public class WarrantyClaimRepositoryImpl implements IWarrantyClaimRepository {
     private final RowMapper<WarrantyClaim> claimRowMapper = (rs, rowNum) -> {
         WarrantyClaim claim = new WarrantyClaim();
         claim.setId(rs.getLong("id"));
-        claim.setClaim_number(rs.getString("claim_number"));
-        claim.setVehicle_id(rs.getLong("vehicle_id"));
-        claim.setService_center_id(rs.getLong("service_center_id"));
-        claim.setCreated_by_user_id(rs.getLong("created_by_user_id"));
+        claim.setClaimNumber(rs.getString("claim_number"));
+        claim.setVehicleId(rs.getLong("vehicle_id"));
+        claim.setServiceCenterId(rs.getLong("service_center_id"));
+        claim.setCreatedByUserId(rs.getLong("created_by_user_id"));
 
         Long assignedTechnicianId = rs.getLong("assigned_technician_id");
         if (rs.wasNull())
             assignedTechnicianId = null;
-        claim.setAssigned_technician_id(assignedTechnicianId);
+        claim.setAssignedTechnicianId(assignedTechnicianId);
 
         Long evmReviewerUserId = rs.getLong("evm_reviewer_user_id");
         if (rs.wasNull())
             evmReviewerUserId = null;
-        claim.setEvm_reviewer_user_id(evmReviewerUserId);
+        claim.setEvmReviewerUserId(evmReviewerUserId);
 
         String statusStr = rs.getString("status");
         claim.setStatus(statusStr);
 
-        claim.setIssue_description(rs.getString("issue_description"));
-        claim.setDtc_code(rs.getString("dtc_code"));
+        claim.setIssueDescription(rs.getString("issue_description"));
+        claim.setDtcCode(rs.getString("dtc_code"));
 
         Integer mileage = rs.getInt("mileage_km_at_claim");
         if (rs.wasNull())
             mileage = null;
-        claim.setMileage_km_at_claim(mileage);
+        claim.setMileageKmAtClaim(mileage);
 
         java.sql.Timestamp submittedAt = rs.getTimestamp("submitted_at");
         if (submittedAt != null) {
-            claim.setSubmitted_at(submittedAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
+            claim.setSubmittedAt(submittedAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
         }
 
         java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
         if (createdAt != null) {
-            claim.setCreated_at(createdAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
+            claim.setCreatedAt(createdAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
         }
 
         java.sql.Timestamp approvedAt = rs.getTimestamp("approved_at");
         if (approvedAt != null) {
-            claim.setApproved_at(approvedAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
+            claim.setApprovedAt(approvedAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
         }
 
         return claim;
@@ -78,45 +78,45 @@ public class WarrantyClaimRepositoryImpl implements IWarrantyClaimRepository {
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
                 PreparedStatement ps = connection.prepareStatement(sql, new String[] { "id" });
-                ps.setString(1, warrantyClaim.getClaim_number());
-                ps.setLong(2, warrantyClaim.getVehicle_id());
-                if (warrantyClaim.getService_center_id() != null) {
-                    ps.setLong(3, warrantyClaim.getService_center_id());
+                ps.setString(1, warrantyClaim.getClaimNumber());
+                ps.setLong(2, warrantyClaim.getVehicleId());
+                if (warrantyClaim.getServiceCenterId() != null) {
+                    ps.setLong(3, warrantyClaim.getServiceCenterId());
                 } else {
                     ps.setNull(3, java.sql.Types.BIGINT);
                 }
-                ps.setLong(4, warrantyClaim.getCreated_by_user_id());
+                ps.setLong(4, warrantyClaim.getCreatedByUserId());
 
-                if (warrantyClaim.getAssigned_technician_id() != null) {
-                    ps.setLong(5, warrantyClaim.getAssigned_technician_id());
+                if (warrantyClaim.getAssignedTechnicianId() != null) {
+                    ps.setLong(5, warrantyClaim.getAssignedTechnicianId());
                 } else {
                     ps.setNull(5, java.sql.Types.BIGINT);
                 }
 
-                if (warrantyClaim.getEvm_reviewer_user_id() != null) {
-                    ps.setLong(6, warrantyClaim.getEvm_reviewer_user_id());
+                if (warrantyClaim.getEvmReviewerUserId() != null) {
+                    ps.setLong(6, warrantyClaim.getEvmReviewerUserId());
                 } else {
                     ps.setNull(6, java.sql.Types.BIGINT);
                 }
 
                 ps.setString(7, warrantyClaim.getStatus() != null ? warrantyClaim.getStatus() : "draft");
-                ps.setString(8, warrantyClaim.getIssue_description());
-                ps.setString(9, warrantyClaim.getDtc_code());
+                ps.setString(8, warrantyClaim.getIssueDescription());
+                ps.setString(9, warrantyClaim.getDtcCode());
 
-                if (warrantyClaim.getMileage_km_at_claim() != null) {
-                    ps.setInt(10, warrantyClaim.getMileage_km_at_claim());
+                if (warrantyClaim.getMileageKmAtClaim() != null) {
+                    ps.setInt(10, warrantyClaim.getMileageKmAtClaim());
                 } else {
                     ps.setNull(10, java.sql.Types.INTEGER);
                 }
 
-                if (warrantyClaim.getSubmitted_at() != null) {
-                    ps.setTimestamp(11, java.sql.Timestamp.valueOf(warrantyClaim.getSubmitted_at().toLocalDateTime()));
+                if (warrantyClaim.getSubmittedAt() != null) {
+                    ps.setTimestamp(11, java.sql.Timestamp.valueOf(warrantyClaim.getSubmittedAt().toLocalDateTime()));
                 } else {
                     ps.setNull(11, java.sql.Types.TIMESTAMP);
                 }
 
-                if (warrantyClaim.getApproved_at() != null) {
-                    ps.setTimestamp(12, java.sql.Timestamp.valueOf(warrantyClaim.getApproved_at().toLocalDateTime()));
+                if (warrantyClaim.getApprovedAt() != null) {
+                    ps.setTimestamp(12, java.sql.Timestamp.valueOf(warrantyClaim.getApprovedAt().toLocalDateTime()));
                 } else {
                     ps.setNull(12, java.sql.Types.TIMESTAMP);
                 }
@@ -134,21 +134,21 @@ public class WarrantyClaimRepositoryImpl implements IWarrantyClaimRepository {
                     + "issue_description = ?, dtc_code = ?, mileage_km_at_claim = ?, submitted_at = ?, approved_at = ? WHERE id = ?";
 
             jdbcTemplate.update(sql,
-                    warrantyClaim.getClaim_number(),
-                    warrantyClaim.getVehicle_id(),
-                    warrantyClaim.getService_center_id(),
-                    warrantyClaim.getCreated_by_user_id(),
-                    warrantyClaim.getAssigned_technician_id(),
-                    warrantyClaim.getEvm_reviewer_user_id(),
+                    warrantyClaim.getClaimNumber(),
+                    warrantyClaim.getVehicleId(),
+                    warrantyClaim.getServiceCenterId(),
+                    warrantyClaim.getCreatedByUserId(),
+                    warrantyClaim.getAssignedTechnicianId(),
+                    warrantyClaim.getEvmReviewerUserId(),
                     warrantyClaim.getStatus() != null ? warrantyClaim.getStatus() : "draft",
-                    warrantyClaim.getIssue_description(),
-                    warrantyClaim.getDtc_code(),
-                    warrantyClaim.getMileage_km_at_claim(),
-                    warrantyClaim.getSubmitted_at() != null
-                            ? java.sql.Timestamp.valueOf(warrantyClaim.getSubmitted_at().toLocalDateTime())
+                    warrantyClaim.getIssueDescription(),
+                    warrantyClaim.getDtcCode(),
+                    warrantyClaim.getMileageKmAtClaim(),
+                    warrantyClaim.getSubmittedAt() != null
+                            ? java.sql.Timestamp.valueOf(warrantyClaim.getSubmittedAt().toLocalDateTime())
                             : null,
-                    warrantyClaim.getApproved_at() != null
-                            ? java.sql.Timestamp.valueOf(warrantyClaim.getApproved_at().toLocalDateTime())
+                    warrantyClaim.getApprovedAt() != null
+                            ? java.sql.Timestamp.valueOf(warrantyClaim.getApprovedAt().toLocalDateTime())
                             : null,
                     warrantyClaim.getId());
         }

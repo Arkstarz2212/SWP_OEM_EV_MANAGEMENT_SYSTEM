@@ -11,9 +11,9 @@ public class WarrantyClaimResponse {
     private String issueDescription;
     private String dtcCode;
     private Integer mileageKmAtClaim;
+    private OffsetDateTime createdAt;
     private OffsetDateTime submittedAt;
     private OffsetDateTime approvedAt;
-    // completedAt/createdAt are not in core table; keep only submitted/approved
 
     // Vehicle info (from core: WarrantyClaim.vehicle_id + join vehicles)
     private Long vehicleId;
@@ -98,7 +98,13 @@ public class WarrantyClaimResponse {
         this.approvedAt = approvedAt;
     }
 
-    // removed createdAt/completedAt accessors to match core table
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
 
     public Long getVehicleId() {
         return vehicleId;

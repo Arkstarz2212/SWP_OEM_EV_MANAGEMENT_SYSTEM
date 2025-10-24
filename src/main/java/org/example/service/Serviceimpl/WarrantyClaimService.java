@@ -51,19 +51,19 @@ public class WarrantyClaimService implements IWarrantyClaimService {
 
         String claimNumber = generateClaimNumber();
         WarrantyClaim claim = new WarrantyClaim();
-        claim.setClaim_number(claimNumber);
-        claim.setVehicle_id(vehicle.getId());
-        claim.setService_center_id(serviceCenterId);
-        claim.setCreated_by_user_id(createdByUserId);
-        claim.setAssigned_technician_id(null);
-        claim.setEvm_reviewer_user_id(null);
-        claim.setIssue_description(request.getIssueDescription());
-        claim.setDtc_code(request.getDtcCode());
-        claim.setMileage_km_at_claim(request.getMileageKmAtClaim());
+        claim.setClaimNumber(claimNumber);
+        claim.setVehicleId(vehicle.getId());
+        claim.setServiceCenterId(serviceCenterId);
+        claim.setCreatedByUserId(createdByUserId);
+        claim.setAssignedTechnicianId(null);
+        claim.setEvmReviewerUserId(null);
+        claim.setIssueDescription(request.getIssueDescription());
+        claim.setDtcCode(request.getDtcCode());
+        claim.setMileageKmAtClaim(request.getMileageKmAtClaim());
         claim.setStatus(ClaimStatus.draft.name());
-        claim.setCreated_at(OffsetDateTime.now());
-        claim.setSubmitted_at(null);
-        claim.setApproved_at(null);
+        claim.setCreatedAt(OffsetDateTime.now());
+        claim.setSubmittedAt(null);
+        claim.setApprovedAt(null);
 
         WarrantyClaim saved = claimRepository.save(claim);
         // log initial status
@@ -71,7 +71,7 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         log.setClaimId(saved.getId());
         log.setFromStatus(null);
         log.setToStatus(ClaimStatus.draft);
-        log.setChangedByUserId(saved.getCreated_by_user_id());
+        log.setChangedByUserId(saved.getCreatedByUserId());
         log.setChangedAt(OffsetDateTime.now());
         statusLogService.log(log);
         return toDetailResponse(saved, vin, vehicle.getModel());
@@ -90,13 +90,13 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         WarrantyClaim claim = claimOpt.get();
         ClaimStatus old = ClaimStatus.valueOf(claim.getStatus());
         claim.setStatus(ClaimStatus.submitted.name());
-        claim.setSubmitted_at(OffsetDateTime.now());
+        claim.setSubmittedAt(OffsetDateTime.now());
         claimRepository.save(claim);
         ClaimStatusHistory log = new ClaimStatusHistory();
         log.setClaimId(claim.getId());
         log.setFromStatus(old);
         log.setToStatus(ClaimStatus.submitted);
-        log.setChangedByUserId(claim.getCreated_by_user_id());
+        log.setChangedByUserId(claim.getCreatedByUserId());
         log.setChangedAt(OffsetDateTime.now());
         statusLogService.log(log);
         return true;
@@ -111,8 +111,8 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         WarrantyClaim claim = claimOpt.get();
         String vin = null;
         String model = null;
-        if (claim.getVehicle_id() != null) {
-            Optional<Vehicle> vehicleOpt = vehicleRepository.findById(claim.getVehicle_id());
+        if (claim.getVehicleId() != null) {
+            Optional<Vehicle> vehicleOpt = vehicleRepository.findById(claim.getVehicleId());
             if (vehicleOpt.isPresent()) {
                 vin = vehicleOpt.get().getVin();
                 model = vehicleOpt.get().getModel();
@@ -138,7 +138,7 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         if (claimOpt.isEmpty())
             return false;
         WarrantyClaim claim = claimOpt.get();
-        claim.setAssigned_technician_id(request.getTechnicianId());
+        claim.setAssignedTechnicianId(request.getTechnicianId());
         claimRepository.save(claim);
         return true;
     }
@@ -149,7 +149,7 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         if (claimOpt.isEmpty())
             return false;
         WarrantyClaim claim = claimOpt.get();
-        claim.setAssigned_technician_id(technicianId);
+        claim.setAssignedTechnicianId(technicianId);
         claim.setStatus(ClaimStatus.in_repair.name());
         claimRepository.save(claim);
         return true;
@@ -176,7 +176,7 @@ public class WarrantyClaimService implements IWarrantyClaimService {
     public List<WarrantyClaimResponse> getClaimsAssignedToTechnician(Long technicianId) {
         // Repository does not expose direct method; filter in-memory for now
         return claimRepository.findAll().stream()
-                .filter(c -> technicianId.equals(c.getAssigned_technician_id()))
+                .filter(c -> technicianId.equals(c.getAssignedTechnicianId()))
                 .map(this::toResponse)
                 .toList();
     }
@@ -194,10 +194,10 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         if (claimOpt.isEmpty())
             return false;
         WarrantyClaim claim = claimOpt.get();
-        claim.setEvm_reviewer_user_id(reviewerId);
+        claim.setEvmReviewerUserId(reviewerId);
         claim.setStatus(decision.name());
         if (decision == ClaimStatus.approved) {
-            claim.setApproved_at(OffsetDateTime.now());
+            claim.setApprovedAt(OffsetDateTime.now());
         }
         claimRepository.save(claim);
         return true;
@@ -256,9 +256,9 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         if (request.getVin() != null && !request.getVin().isBlank()) {
             String vin = request.getVin().toLowerCase();
             claims = claims.stream().filter(c -> {
-                if (c.getVehicle_id() == null)
+                if (c.getVehicleId() == null)
                     return false;
-                Optional<Vehicle> v = vehicleRepository.findById(c.getVehicle_id());
+                Optional<Vehicle> v = vehicleRepository.findById(c.getVehicleId());
                 return v.isPresent() && v.get().getVin().toLowerCase().contains(vin);
             }).toList();
         }
@@ -323,10 +323,10 @@ public class WarrantyClaimService implements IWarrantyClaimService {
             return false;
         }
         org.example.models.core.WarrantyClaim claim = claimOpt.get();
-        if (claim.getVehicle_id() == null) {
+        if (claim.getVehicleId() == null) {
             return false;
         }
-        Optional<Vehicle> vehicleOpt = vehicleRepository.findById(claim.getVehicle_id());
+        Optional<Vehicle> vehicleOpt = vehicleRepository.findById(claim.getVehicleId());
         if (vehicleOpt.isEmpty()) {
             return false;
         }
@@ -336,7 +336,7 @@ public class WarrantyClaimService implements IWarrantyClaimService {
             return false;
         }
         // Use submitted_at as claim date if present, otherwise now
-        OffsetDateTime claimDate = claim.getSubmitted_at() != null ? claim.getSubmitted_at() : OffsetDateTime.now();
+        OffsetDateTime claimDate = claim.getSubmittedAt() != null ? claim.getSubmittedAt() : OffsetDateTime.now();
         try {
             if (info.getStartDate() != null && info.getEndDate() != null) {
                 OffsetDateTime start = info.getStartDate().atStartOfDay().atOffset(claimDate.getOffset());
@@ -371,9 +371,9 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         ClaimStatus old = ClaimStatus.valueOf(claim.getStatus());
         claim.setStatus(newStatus.name());
         if (newStatus == ClaimStatus.approved) {
-            claim.setApproved_at(OffsetDateTime.now());
+            claim.setApprovedAt(OffsetDateTime.now());
         } else if (newStatus == ClaimStatus.submitted) {
-            claim.setSubmitted_at(OffsetDateTime.now());
+            claim.setSubmittedAt(OffsetDateTime.now());
         }
         claimRepository.save(claim);
         ClaimStatusHistory log = new ClaimStatusHistory();
@@ -402,8 +402,8 @@ public class WarrantyClaimService implements IWarrantyClaimService {
             Long organizationId) {
         // Filter by submitted_at as createdAt is not present in core
         return claimRepository.findAll().stream()
-                .filter(c -> c.getSubmitted_at() != null && !c.getSubmitted_at().isBefore(startDate)
-                        && !c.getSubmitted_at().isAfter(endDate))
+                .filter(c -> c.getSubmittedAt() != null && !c.getSubmittedAt().isBefore(startDate)
+                        && !c.getSubmittedAt().isAfter(endDate))
                 .map(this::toResponse)
                 .toList();
     }
@@ -417,15 +417,16 @@ public class WarrantyClaimService implements IWarrantyClaimService {
     private WarrantyClaimDetailResponse toDetailResponse(WarrantyClaim claim, String vin, String vehicleModel) {
         WarrantyClaimDetailResponse res = new WarrantyClaimDetailResponse();
         res.setClaimId(claim.getId());
-        res.setClaimNumber(claim.getClaim_number());
+        res.setClaimNumber(claim.getClaimNumber());
         res.setVin(vin);
         res.setVehicleModel(vehicleModel);
-        res.setDtcCode(claim.getDtc_code());
-        res.setIssueDescription(claim.getIssue_description());
-        res.setMileageKmAtClaim(claim.getMileage_km_at_claim());
+        res.setDtcCode(claim.getDtcCode());
+        res.setIssueDescription(claim.getIssueDescription());
+        res.setMileageKmAtClaim(claim.getMileageKmAtClaim());
         res.setStatus(ClaimStatus.valueOf(claim.getStatus()));
-        res.setSubmitDate(claim.getSubmitted_at());
-        res.setApprovalDate(claim.getApproved_at());
+        res.setCreatedAt(claim.getCreatedAt());
+        res.setSubmitDate(claim.getSubmittedAt());
+        res.setApprovalDate(claim.getApprovedAt());
         // completion date handled by service records/logs; omitted here
         return res;
     }
@@ -433,18 +434,19 @@ public class WarrantyClaimService implements IWarrantyClaimService {
     private WarrantyClaimResponse toResponse(WarrantyClaim claim) {
         WarrantyClaimResponse res = new WarrantyClaimResponse();
         res.setId(claim.getId());
-        res.setClaimNumber(claim.getClaim_number());
+        res.setClaimNumber(claim.getClaimNumber());
         res.setStatus(ClaimStatus.valueOf(claim.getStatus()));
-        res.setIssueDescription(claim.getIssue_description());
-        res.setDtcCode(claim.getDtc_code());
-        res.setMileageKmAtClaim(claim.getMileage_km_at_claim());
-        res.setSubmittedAt(claim.getSubmitted_at());
-        res.setApprovedAt(claim.getApproved_at());
-        res.setVehicleId(claim.getVehicle_id());
-        res.setServiceCenterId(claim.getService_center_id());
-        res.setCreatedByUserId(claim.getCreated_by_user_id());
-        res.setAssignedTechnicianId(claim.getAssigned_technician_id());
-        res.setEvmReviewerUserId(claim.getEvm_reviewer_user_id());
+        res.setIssueDescription(claim.getIssueDescription());
+        res.setDtcCode(claim.getDtcCode());
+        res.setMileageKmAtClaim(claim.getMileageKmAtClaim());
+        res.setCreatedAt(claim.getCreatedAt());
+        res.setSubmittedAt(claim.getSubmittedAt());
+        res.setApprovedAt(claim.getApprovedAt());
+        res.setVehicleId(claim.getVehicleId());
+        res.setServiceCenterId(claim.getServiceCenterId());
+        res.setCreatedByUserId(claim.getCreatedByUserId());
+        res.setAssignedTechnicianId(claim.getAssignedTechnicianId());
+        res.setEvmReviewerUserId(claim.getEvmReviewerUserId());
         return res;
     }
 

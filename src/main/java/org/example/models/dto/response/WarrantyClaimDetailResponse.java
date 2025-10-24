@@ -16,6 +16,7 @@ public class WarrantyClaimDetailResponse {
     private String issueDescription;
     private Integer mileageKmAtClaim;
     private ClaimStatus status;
+    private OffsetDateTime createdAt;
     private OffsetDateTime submitDate;
     private OffsetDateTime approvalDate;
     // Simplified: drop notes/cost/attachments, keep status history mapping from
@@ -101,6 +102,14 @@ public class WarrantyClaimDetailResponse {
 
     public void setStatus(ClaimStatus status) {
         this.status = status;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public OffsetDateTime getSubmitDate() {

@@ -2,25 +2,29 @@ package org.example.models.core;
 
 import java.time.OffsetDateTime;
 
+/**
+ * Warranty Claim model mapping to aoem.warranty_claims table
+ */
 public class WarrantyClaim {
-    private Long id; // aoem.warranty_claims.id
-    private String claim_number; // aoem.warranty_claims.claim_number
-    private Long vehicle_id; // aoem.warranty_claims.vehicle_id
-    private Long service_center_id; // aoem.warranty_claims.service_center_id
-    private Long created_by_user_id; // aoem.warranty_claims.created_by_user_id
-    private Long assigned_technician_id; // aoem.warranty_claims.assigned_technician_id
-    private Long evm_reviewer_user_id; // aoem.warranty_claims.evm_reviewer_user_id
-    private String status; // aoem.warranty_claims.status (VARCHAR)
-    private String issue_description; // aoem.warranty_claims.issue_description
-    private String dtc_code; // aoem.warranty_claims.dtc_code
-    private Integer mileage_km_at_claim; // aoem.warranty_claims.mileage_km_at_claim
-    private OffsetDateTime created_at; // aoem.warranty_claims.created_at
-    private OffsetDateTime submitted_at; // aoem.warranty_claims.submitted_at
-    private OffsetDateTime approved_at; // aoem.warranty_claims.approved_at
+    private Long id;
+    private String claimNumber;
+    private Long vehicleId;
+    private Long serviceCenterId;
+    private Long createdByUserId;
+    private Long assignedTechnicianId;
+    private Long evmReviewerUserId;
+    private String status; // draft, submitted, under_review, approved, completed
+    private String issueDescription;
+    private String dtcCode;
+    private Integer mileageKmAtClaim;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime submittedAt;
+    private OffsetDateTime approvedAt;
 
     public WarrantyClaim() {
     }
 
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -29,52 +33,52 @@ public class WarrantyClaim {
         this.id = id;
     }
 
-    public String getClaim_number() {
-        return claim_number;
+    public String getClaimNumber() {
+        return claimNumber;
     }
 
-    public void setClaim_number(String claim_number) {
-        this.claim_number = claim_number;
+    public void setClaimNumber(String claimNumber) {
+        this.claimNumber = claimNumber;
     }
 
-    public Long getVehicle_id() {
-        return vehicle_id;
+    public Long getVehicleId() {
+        return vehicleId;
     }
 
-    public void setVehicle_id(Long vehicle_id) {
-        this.vehicle_id = vehicle_id;
+    public void setVehicleId(Long vehicleId) {
+        this.vehicleId = vehicleId;
     }
 
-    public Long getService_center_id() {
-        return service_center_id;
+    public Long getServiceCenterId() {
+        return serviceCenterId;
     }
 
-    public void setService_center_id(Long service_center_id) {
-        this.service_center_id = service_center_id;
+    public void setServiceCenterId(Long serviceCenterId) {
+        this.serviceCenterId = serviceCenterId;
     }
 
-    public Long getCreated_by_user_id() {
-        return created_by_user_id;
+    public Long getCreatedByUserId() {
+        return createdByUserId;
     }
 
-    public void setCreated_by_user_id(Long created_by_user_id) {
-        this.created_by_user_id = created_by_user_id;
+    public void setCreatedByUserId(Long createdByUserId) {
+        this.createdByUserId = createdByUserId;
     }
 
-    public Long getAssigned_technician_id() {
-        return assigned_technician_id;
+    public Long getAssignedTechnicianId() {
+        return assignedTechnicianId;
     }
 
-    public void setAssigned_technician_id(Long assigned_technician_id) {
-        this.assigned_technician_id = assigned_technician_id;
+    public void setAssignedTechnicianId(Long assignedTechnicianId) {
+        this.assignedTechnicianId = assignedTechnicianId;
     }
 
-    public Long getEvm_reviewer_user_id() {
-        return evm_reviewer_user_id;
+    public Long getEvmReviewerUserId() {
+        return evmReviewerUserId;
     }
 
-    public void setEvm_reviewer_user_id(Long evm_reviewer_user_id) {
-        this.evm_reviewer_user_id = evm_reviewer_user_id;
+    public void setEvmReviewerUserId(Long evmReviewerUserId) {
+        this.evmReviewerUserId = evmReviewerUserId;
     }
 
     public String getStatus() {
@@ -85,51 +89,192 @@ public class WarrantyClaim {
         this.status = status;
     }
 
+    public String getIssueDescription() {
+        return issueDescription;
+    }
+
+    public void setIssueDescription(String issueDescription) {
+        this.issueDescription = issueDescription;
+    }
+
+    public String getDtcCode() {
+        return dtcCode;
+    }
+
+    public void setDtcCode(String dtcCode) {
+        this.dtcCode = dtcCode;
+    }
+
+    public Integer getMileageKmAtClaim() {
+        return mileageKmAtClaim;
+    }
+
+    public void setMileageKmAtClaim(Integer mileageKmAtClaim) {
+        this.mileageKmAtClaim = mileageKmAtClaim;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public OffsetDateTime getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public void setSubmittedAt(OffsetDateTime submittedAt) {
+        this.submittedAt = submittedAt;
+    }
+
+    public OffsetDateTime getApprovedAt() {
+        return approvedAt;
+    }
+
+    public void setApprovedAt(OffsetDateTime approvedAt) {
+        this.approvedAt = approvedAt;
+    }
+
+    // Legacy methods for backward compatibility (deprecated)
+    @Deprecated
+    public String getClaim_number() {
+        return claimNumber;
+    }
+
+    @Deprecated
+    public void setClaim_number(String claim_number) {
+        this.claimNumber = claim_number;
+    }
+
+    @Deprecated
+    public Long getVehicle_id() {
+        return vehicleId;
+    }
+
+    @Deprecated
+    public void setVehicle_id(Long vehicle_id) {
+        this.vehicleId = vehicle_id;
+    }
+
+    @Deprecated
+    public Long getService_center_id() {
+        return serviceCenterId;
+    }
+
+    @Deprecated
+    public void setService_center_id(Long service_center_id) {
+        this.serviceCenterId = service_center_id;
+    }
+
+    @Deprecated
+    public Long getCreated_by_user_id() {
+        return createdByUserId;
+    }
+
+    @Deprecated
+    public void setCreated_by_user_id(Long created_by_user_id) {
+        this.createdByUserId = created_by_user_id;
+    }
+
+    @Deprecated
+    public Long getAssigned_technician_id() {
+        return assignedTechnicianId;
+    }
+
+    @Deprecated
+    public void setAssigned_technician_id(Long assigned_technician_id) {
+        this.assignedTechnicianId = assigned_technician_id;
+    }
+
+    @Deprecated
+    public Long getEvm_reviewer_user_id() {
+        return evmReviewerUserId;
+    }
+
+    @Deprecated
+    public void setEvm_reviewer_user_id(Long evm_reviewer_user_id) {
+        this.evmReviewerUserId = evm_reviewer_user_id;
+    }
+
+    @Deprecated
     public String getIssue_description() {
-        return issue_description;
+        return issueDescription;
     }
 
+    @Deprecated
     public void setIssue_description(String issue_description) {
-        this.issue_description = issue_description;
+        this.issueDescription = issue_description;
     }
 
+    @Deprecated
     public String getDtc_code() {
-        return dtc_code;
+        return dtcCode;
     }
 
+    @Deprecated
     public void setDtc_code(String dtc_code) {
-        this.dtc_code = dtc_code;
+        this.dtcCode = dtc_code;
     }
 
+    @Deprecated
     public Integer getMileage_km_at_claim() {
-        return mileage_km_at_claim;
+        return mileageKmAtClaim;
     }
 
+    @Deprecated
     public void setMileage_km_at_claim(Integer mileage_km_at_claim) {
-        this.mileage_km_at_claim = mileage_km_at_claim;
+        this.mileageKmAtClaim = mileage_km_at_claim;
     }
 
+    @Deprecated
     public OffsetDateTime getCreated_at() {
-        return created_at;
+        return createdAt;
     }
 
+    @Deprecated
     public void setCreated_at(OffsetDateTime created_at) {
-        this.created_at = created_at;
+        this.createdAt = created_at;
     }
 
+    @Deprecated
     public OffsetDateTime getSubmitted_at() {
-        return submitted_at;
+        return submittedAt;
     }
 
+    @Deprecated
     public void setSubmitted_at(OffsetDateTime submitted_at) {
-        this.submitted_at = submitted_at;
+        this.submittedAt = submitted_at;
     }
 
+    @Deprecated
     public OffsetDateTime getApproved_at() {
-        return approved_at;
+        return approvedAt;
     }
 
+    @Deprecated
     public void setApproved_at(OffsetDateTime approved_at) {
-        this.approved_at = approved_at;
+        this.approvedAt = approved_at;
+    }
+
+    @Override
+    public String toString() {
+        return "WarrantyClaim{" +
+                "id=" + id +
+                ", claimNumber='" + claimNumber + '\'' +
+                ", vehicleId=" + vehicleId +
+                ", serviceCenterId=" + serviceCenterId +
+                ", createdByUserId=" + createdByUserId +
+                ", assignedTechnicianId=" + assignedTechnicianId +
+                ", evmReviewerUserId=" + evmReviewerUserId +
+                ", status='" + status + '\'' +
+                ", issueDescription='" + issueDescription + '\'' +
+                ", dtcCode='" + dtcCode + '\'' +
+                ", mileageKmAtClaim=" + mileageKmAtClaim +
+                ", createdAt=" + createdAt +
+                ", submittedAt=" + submittedAt +
+                ", approvedAt=" + approvedAt +
+                '}';
     }
 }
