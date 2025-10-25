@@ -33,7 +33,7 @@ public class ReportsController {
     private IServiceRecordRepository serviceRecordRepository;
 
     @GetMapping
-    @Operation(summary = "Reporting check", description = "Return aggregated numbers for health check and dashboards")
+    @Operation(summary = "Reporting check", description = "Return aggregated numbers for health check and dashboards. Roles: Admin, SC_Staff, EVM_Staff. Performance sub-resources may allow SC_Technician.")
     public ResponseEntity<?> getAggregates() {
         Map<String, Object> res = new LinkedHashMap<>();
 

@@ -30,7 +30,7 @@ public class ShipmentController {
     private IShipmentService shipmentService;
 
     @PostMapping
-    @Operation(summary = "Create Shipment", description = "Create a new shipment for parts delivery to a service center for a warranty claim.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Shipment creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Shipment Example", value = "{\"claimId\": 2001, \"serviceCenterId\": 2, \"partNumbers\": [\"BAT001\", \"MOTOR002\"], \"priority\": \"urgent\", \"notes\": \"Rush delivery for customer\"}"))))
+    @Operation(summary = "Create Shipment", description = "Create a new shipment for parts delivery to a service center for a warranty claim. Roles: EVM_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Shipment creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Shipment Example", value = "{\"claimId\": 2001, \"serviceCenterId\": 2, \"partNumbers\": [\"BAT001\", \"MOTOR002\"], \"priority\": \"urgent\", \"notes\": \"Rush delivery for customer\"}"))))
     public ResponseEntity<?> createShipment(@RequestBody Map<String, Object> body) {
         try {
             Long claimId = body.get("claimId") != null ? Long.valueOf(body.get("claimId").toString()) : null;
@@ -53,7 +53,7 @@ public class ShipmentController {
     }
 
     @GetMapping("/{shipmentId}")
-    @Operation(summary = "Get Shipment Details", description = "Retrieve detailed information about a specific shipment.", parameters = {
+    @Operation(summary = "Get Shipment Details", description = "Retrieve detailed information about a specific shipment. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "shipmentId", description = "Shipment ID", required = true, example = "1001") })
     public ResponseEntity<?> getShipment(@PathVariable("shipmentId") Long shipmentId) {
         try {
@@ -65,7 +65,7 @@ public class ShipmentController {
     }
 
     @PutMapping("/{shipmentId}/status")
-    @Operation(summary = "Update Shipment Status", description = "Update the status of a shipment with optional notes.", parameters = {
+    @Operation(summary = "Update Shipment Status", description = "Update the status of a shipment with optional notes. Roles: EVM_Staff.", parameters = {
             @Parameter(name = "shipmentId", description = "Shipment ID", required = true, example = "1001"),
             @Parameter(name = "status", description = "New status (e.g., shipped, in_transit, delivered)", required = true, example = "shipped"),
             @Parameter(name = "notes", description = "Optional status update notes", required = false, example = "Package picked up by carrier")
@@ -82,7 +82,7 @@ public class ShipmentController {
     }
 
     @PostMapping("/{shipmentId}/track")
-    @Operation(summary = "Add Tracking Information", description = "Add tracking number and carrier information to a shipment.", parameters = {
+    @Operation(summary = "Add Tracking Information", description = "Add tracking number and carrier information to a shipment. Roles: EVM_Staff.", parameters = {
             @Parameter(name = "shipmentId", description = "Shipment ID", required = true, example = "1001") }, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Tracking information", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Add Tracking Example", value = "{\"trackingNumber\": \"1Z999AA1234567890\", \"carrier\": \"UPS\", \"estimatedDelivery\": \"2024-12-05\"}"))))
     public ResponseEntity<?> addTrackingInfo(@PathVariable("shipmentId") Long shipmentId,
             @RequestBody Map<String, Object> body) {
@@ -99,7 +99,7 @@ public class ShipmentController {
     }
 
     @GetMapping("/claim/{claimId}")
-    @Operation(summary = "Shipments by Claim", description = "Get all shipments associated with a specific warranty claim.", parameters = {
+    @Operation(summary = "Shipments by Claim", description = "Get all shipments associated with a specific warranty claim. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "claimId", description = "Warranty claim ID", required = true, example = "2001") })
     public ResponseEntity<?> getShipmentsByClaim(@PathVariable("claimId") Long claimId) {
         try {
@@ -111,7 +111,7 @@ public class ShipmentController {
     }
 
     @GetMapping("/service-center/{serviceCenterId}")
-    @Operation(summary = "Shipments by Service Center", description = "Get all shipments for a service center with optional status filtering.", parameters = {
+    @Operation(summary = "Shipments by Service Center", description = "Get all shipments for a service center with optional status filtering. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "serviceCenterId", description = "Service center ID", required = true, example = "2"),
             @Parameter(name = "status", description = "Filter by shipment status", required = false, example = "pending")
     })
@@ -126,7 +126,7 @@ public class ShipmentController {
     }
 
     @PostMapping("/{shipmentId}/deliver")
-    @Operation(summary = "Mark as Delivered", description = "Mark a shipment as delivered with delivery details.", parameters = {
+    @Operation(summary = "Mark as Delivered", description = "Mark a shipment as delivered with delivery details. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "shipmentId", description = "Shipment ID", required = true, example = "1001") }, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Delivery information", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Mark Delivered Example", value = "{\"deliveredBy\": \"John Smith\", \"deliveryNotes\": \"Delivered to service center reception\"}"))))
     public ResponseEntity<?> markAsDelivered(@PathVariable("shipmentId") Long shipmentId,
             @RequestBody Map<String, Object> body) {
@@ -142,7 +142,7 @@ public class ShipmentController {
     }
 
     @GetMapping("/tracking/{trackingNumber}")
-    @Operation(summary = "Get Shipment by Tracking Number", description = "Lookup shipment details using tracking number.", parameters = {
+    @Operation(summary = "Get Shipment by Tracking Number", description = "Lookup shipment details using tracking number. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "trackingNumber", description = "Tracking number", required = true, example = "1Z999AA1234567890") })
     public ResponseEntity<?> getShipmentByTracking(@PathVariable("trackingNumber") String trackingNumber) {
         try {
@@ -154,7 +154,7 @@ public class ShipmentController {
     }
 
     @GetMapping("/pending")
-    @Operation(summary = "Pending Shipments", description = "Get all pending shipments, optionally filtered by service center.", parameters = {
+    @Operation(summary = "Pending Shipments", description = "Get all pending shipments, optionally filtered by service center. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "serviceCenterId", description = "Service center ID filter", required = false, example = "2") })
     public ResponseEntity<?> getPendingShipments(
             @RequestParam(value = "serviceCenterId", required = false) Long serviceCenterId) {

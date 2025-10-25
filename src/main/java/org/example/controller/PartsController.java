@@ -62,7 +62,7 @@ public class PartsController {
     private IAuthenticationService authenticationService;
 
     @PostMapping
-    @Operation(summary = "Create New Part", description = "Create a new part in the catalog with part number, name, category, description, unit cost, and manufacturer information.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Part creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Part Example", value = "{\"partNumber\": \"BAT001\", \"name\": \"Battery Pack\", \"category\": \"BATTERY\", \"description\": \"High capacity battery pack\", \"unitCost\": 1500.00, \"oemId\": 1, \"manufacturer\": \"Tesla\"}"))))
+    @Operation(summary = "Create New Part", description = "Create a new part in the catalog with part number, name, category, description, unit cost, and manufacturer information. Roles: EVM_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Part creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Part Example", value = "{\"partNumber\": \"BAT001\", \"name\": \"Battery Pack\", \"category\": \"BATTERY\", \"description\": \"High capacity battery pack\", \"unitCost\": 1500.00, \"oemId\": 1, \"manufacturer\": \"Tesla\"}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Part created successfully", content = @Content(schema = @Schema(implementation = PartCatalogResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data")
@@ -103,7 +103,7 @@ public class PartsController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Part by ID", description = "Retrieve detailed information about a specific part by its unique identifier.", parameters = {
+    @Operation(summary = "Get Part by ID", description = "Retrieve detailed information about a specific part by its unique identifier. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", parameters = {
             @Parameter(name = "id", description = "Part ID", required = true, example = "1")
     })
     @ApiResponses(value = {
@@ -137,7 +137,7 @@ public class PartsController {
     }
 
     @GetMapping("/number/{partNumber}")
-    @Operation(summary = "Get Part by Part Number", description = "Retrieve detailed information about a specific part by its part number.", parameters = {
+    @Operation(summary = "Get Part by Part Number", description = "Retrieve detailed information about a specific part by its part number. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", parameters = {
             @Parameter(name = "partNumber", description = "Part number", required = true, example = "BAT001")
     })
     @ApiResponses(value = {
@@ -170,7 +170,7 @@ public class PartsController {
     }
 
     @GetMapping
-    @Operation(summary = "Search Parts", description = "Search and filter parts by keyword, category, or manufacturer with pagination support.", parameters = {
+    @Operation(summary = "Search Parts", description = "Search and filter parts by keyword, category, or manufacturer with pagination support. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", parameters = {
             @Parameter(name = "keyword", description = "Search keyword for part name or description", required = false, example = "battery"),
             @Parameter(name = "category", description = "Filter by part category", required = false, example = "BATTERY"),
             @Parameter(name = "manufacturer", description = "Filter by manufacturer", required = false, example = "Tesla"),
@@ -219,6 +219,7 @@ public class PartsController {
     }
 
     @PostMapping("/{id}/activate")
+    @Operation(summary = "Activate Part", description = "Activate a part in the catalog. Roles: Admin, EVM_Staff.")
     public ResponseEntity<?> activatePart(@PathVariable("id") Long id) {
         try {
             // RBAC: Admin, EVM_Staff
@@ -252,6 +253,7 @@ public class PartsController {
     }
 
     @PostMapping("/{id}/deactivate")
+    @Operation(summary = "Deactivate Part", description = "Deactivate a part in the catalog. Roles: Admin, EVM_Staff.")
     public ResponseEntity<?> deactivatePart(@PathVariable("id") Long id) {
         try {
             // RBAC: Admin, EVM_Staff
@@ -285,6 +287,7 @@ public class PartsController {
     }
 
     @GetMapping("/category/{category}")
+    @Operation(summary = "Get Parts by Category", description = "List parts by category. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     public ResponseEntity<?> getPartsByCategory(@PathVariable("category") String category) {
         try {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
@@ -311,7 +314,7 @@ public class PartsController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete Part", description = "Delete a part from the catalog by its ID. This action cannot be undone.")
+    @Operation(summary = "Delete Part", description = "Delete a part from the catalog by its ID. Roles: EVM_Staff. This action cannot be undone.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Part deleted successfully", content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "404", description = "Part not found", content = @Content(schema = @Schema(implementation = Map.class))),
@@ -339,7 +342,7 @@ public class PartsController {
     }
 
     @PutMapping("/{id}/status")
-    @Operation(summary = "Update Part Status", description = "Update the active status of a part (activate/deactivate).")
+    @Operation(summary = "Update Part Status", description = "Update the active status of a part (activate/deactivate). Roles: Admin, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Part status updated successfully", content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "404", description = "Part not found", content = @Content(schema = @Schema(implementation = Map.class))),
@@ -368,7 +371,7 @@ public class PartsController {
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Get All Parts", description = "Retrieve all parts in the catalog with pagination support.")
+    @Operation(summary = "Get All Parts", description = "Retrieve all parts in the catalog with pagination support. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Parts retrieved successfully", content = @Content(schema = @Schema(implementation = PartCatalogResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid parameters", content = @Content(schema = @Schema(implementation = Map.class))),

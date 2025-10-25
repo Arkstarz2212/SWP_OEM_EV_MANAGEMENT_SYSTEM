@@ -84,7 +84,7 @@ public class VehiclesController {
     }
 
     @PostMapping
-    @Operation(summary = "Register Vehicle", description = "Register a new vehicle in the system using VIN and model information.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Vehicle registration data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Register Vehicle Example", value = "{\n  \"vin\": \"1HGBH41JXMN109186\",\n  \"oemId\": 1,\n  \"model\": \"Model 3\",\n  \"modelYear\": 2023,\n  \"customerId\": 1,\n  \"vehicleData\": {\n    \"variant\": \"Standard Range Plus\",\n    \"color\": \"Pearl White\",\n    \"batteryCapacity\": \"54 kWh\",\n    \"odometerKm\": 15000,\n    \"motorType\": \"Electric\",\n    \"chargingType\": \"AC\",\n    \"maxChargingPower\": 11,\n    \"drivingRange\": 400,\n    \"driveTrain\": \"RWD\"\n  },\n  \"warrantyInfo\": {\n    \"startDate\": \"2023-01-15\",\n    \"endDate\": \"2028-01-15\",\n    \"kmLimit\": 100000,\n    \"batteryFullCoverage\": true,\n    \"motorFullCoverage\": true,\n    \"inverterFullCoverage\": true,\n    \"bmsFullCoverage\": true,\n    \"chargerPartialCoverage\": true\n  }\n}"))))
+    @Operation(summary = "Register Vehicle", description = "Register a new vehicle in the system using VIN and model information. Roles: Admin, EVM_Staff, SC_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Vehicle registration data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Register Vehicle Example", value = "{\n  \"vin\": \"1HGBH41JXMN109186\",\n  \"oemId\": 1,\n  \"model\": \"Model 3\",\n  \"modelYear\": 2023,\n  \"customerId\": 1,\n  \"vehicleData\": {\n    \"variant\": \"Standard Range Plus\",\n    \"color\": \"Pearl White\",\n    \"batteryCapacity\": \"54 kWh\",\n    \"odometerKm\": 15000,\n    \"motorType\": \"Electric\",\n    \"chargingType\": \"AC\",\n    \"maxChargingPower\": 11,\n    \"drivingRange\": 400,\n    \"driveTrain\": \"RWD\"\n  },\n  \"warrantyInfo\": {\n    \"startDate\": \"2023-01-15\",\n    \"endDate\": \"2028-01-15\",\n    \"kmLimit\": 100000,\n    \"batteryFullCoverage\": true,\n    \"motorFullCoverage\": true,\n    \"inverterFullCoverage\": true,\n    \"bmsFullCoverage\": true,\n    \"chargerPartialCoverage\": true\n  }\n}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Vehicle registered successfully", content = @Content(schema = @Schema(implementation = VehicleDetailResponse.class), examples = @ExampleObject(name = "Success Response", value = "{\n  \"vehicleId\": 4,\n  \"vin\": \"1HGBH41JXMN109186\",\n  \"model\": \"Model 3\",\n  \"variant\": \"Standard Range Plus\",\n  \"modelYear\": 2023,\n  \"currentOdometerKm\": 15000,\n  \"warrantyStartDate\": \"2023-01-15\",\n  \"warrantyEndDate\": \"2028-01-15\",\n  \"warrantyStatus\": \"Active\",\n  \"customer\": {\n    \"customerId\": 1,\n    \"fullName\": \"John Doe\"\n  },\n  \"components\": [],\n  \"serviceHistory\": [],\n  \"warrantyClaims\": []\n}"))),
             @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(examples = @ExampleObject(name = "Error Response", value = "{\"error\": \"VIN, OEM ID, model, and model year are required\"}"))),
@@ -167,7 +167,7 @@ public class VehiclesController {
     }
 
     @GetMapping("/{vin}")
-    @Operation(summary = "Get Vehicle by VIN", description = "Retrieve detailed vehicle information by Vehicle Identification Number (VIN).", parameters = {
+    @Operation(summary = "Get Vehicle by VIN", description = "Retrieve detailed vehicle information by Vehicle Identification Number (VIN). Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", parameters = {
             @Parameter(name = "vin", description = "Vehicle Identification Number", required = true, example = "1HGBH41JXMN109186")
     })
     @ApiResponses(value = {
@@ -185,7 +185,7 @@ public class VehiclesController {
     }
 
     @GetMapping("/{vin}/service-history")
-    @Operation(summary = "Get Vehicle Service History", description = "Retrieve service records for a vehicle by VIN.", parameters = {
+    @Operation(summary = "Get Vehicle Service History", description = "Retrieve service records for a vehicle by VIN. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", parameters = {
             @Parameter(name = "vin", description = "Vehicle Identification Number", required = true, example = "1HGBH41JXMN109186")
     })
     public ResponseEntity<?> getVehicleServiceHistory(@PathVariable("vin") String vin) {
@@ -219,7 +219,7 @@ public class VehiclesController {
     }
 
     @GetMapping("/{vin}/claim-history")
-    @Operation(summary = "Get Vehicle Claim History", description = "Retrieve warranty claim history for a vehicle by VIN.", parameters = {
+    @Operation(summary = "Get Vehicle Claim History", description = "Retrieve warranty claim history for a vehicle by VIN. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "vin", description = "Vehicle Identification Number", required = true, example = "1HGBH41JXMN109186")
     })
     public ResponseEntity<?> getVehicleClaimHistory(@PathVariable("vin") String vin) {
@@ -253,7 +253,7 @@ public class VehiclesController {
     }
 
     @PutMapping("/{vin}/odometer")
-    @Operation(summary = "Update Vehicle Odometer", description = "Update the odometer reading for a specific vehicle identified by VIN.", parameters = {
+    @Operation(summary = "Update Vehicle Odometer", description = "Update the odometer reading for a specific vehicle identified by VIN. Roles: Admin, EVM_Staff, SC_Staff.", parameters = {
             @Parameter(name = "vin", description = "Vehicle Identification Number", required = true, example = "1HGBH41JXMN109186"),
             @Parameter(name = "km", description = "New odometer reading in kilometers", required = true, example = "50000")
     })
@@ -289,7 +289,7 @@ public class VehiclesController {
     }
 
     @GetMapping
-    @Operation(summary = "Get All Vehicles", description = "Retrieve a list of all vehicles with optional filtering and pagination.", parameters = {
+    @Operation(summary = "Get All Vehicles", description = "Retrieve a list of all vehicles with optional filtering and pagination. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "oemId", description = "Filter by OEM ID", required = false, example = "1"),
             @Parameter(name = "customerId", description = "Filter by customer ID", required = false, example = "1"),
             @Parameter(name = "model", description = "Filter by vehicle model", required = false, example = "Model 3"),
@@ -373,7 +373,7 @@ public class VehiclesController {
     }
 
     @PutMapping("/{vin}")
-    @Operation(summary = "Update Vehicle", description = "Update vehicle information by VIN.", parameters = {
+    @Operation(summary = "Update Vehicle", description = "Update vehicle information by VIN. Roles: Admin, EVM_Staff, SC_Staff.", parameters = {
             @Parameter(name = "vin", description = "Vehicle Identification Number", required = true, example = "1HGBH41JXMN109186")
     }, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Vehicle update data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Update Vehicle Example", value = "{\n  \"model\": \"Model 3 Updated\",\n  \"modelYear\": 2024,\n  \"customerId\": 2,\n  \"vehicleData\": {\n    \"variant\": \"Long Range\",\n    \"color\": \"Deep Blue Metallic\",\n    \"batteryCapacity\": \"75 kWh\"\n  },\n  \"warrantyInfo\": {\n    \"startDate\": \"2024-01-15\",\n    \"endDate\": \"2029-01-15\",\n    \"kmLimit\": 120000\n  }\n}"))))
     @ApiResponses(value = {
@@ -448,7 +448,7 @@ public class VehiclesController {
     }
 
     @DeleteMapping("/{vin}")
-    @Operation(summary = "Delete Vehicle", description = "Delete a vehicle from the system by VIN. This action cannot be undone.", parameters = {
+    @Operation(summary = "Delete Vehicle", description = "Delete a vehicle from the system by VIN. Roles: Admin only. This action cannot be undone.", parameters = {
             @Parameter(name = "vin", description = "Vehicle Identification Number", required = true, example = "1HGBH41JXMN109186"),
             @Parameter(name = "reason", description = "Reason for deletion", required = true, example = "Vehicle scrapped")
     })
@@ -513,7 +513,7 @@ public class VehiclesController {
     }
 
     @GetMapping("/vins")
-    @Operation(summary = "Get All VIN IDs", description = "Retrieve a list of all VIN IDs in the system with optional filtering.", parameters = {
+    @Operation(summary = "Get All VIN IDs", description = "Retrieve a list of all VIN IDs in the system with optional filtering. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "oemId", description = "Filter by OEM ID", required = false, example = "1"),
             @Parameter(name = "customerId", description = "Filter by customer ID", required = false, example = "1"),
             @Parameter(name = "model", description = "Filter by vehicle model", required = false, example = "Model 3"),

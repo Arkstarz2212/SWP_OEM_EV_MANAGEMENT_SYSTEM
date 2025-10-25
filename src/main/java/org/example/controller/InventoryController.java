@@ -31,7 +31,7 @@ public class InventoryController {
     private IInventoryService inventoryService;
 
     @GetMapping("/parts/{partNumber}")
-    @Operation(summary = "Get Part Inventory", description = "Get quantity on hand for a part at a specific location.", parameters = {
+    @Operation(summary = "Get Part Inventory", description = "Get quantity on hand for a part at a specific location. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "partNumber", description = "Part number", required = true, example = "BAT001"),
             @Parameter(name = "locationId", description = "Inventory location ID", required = true, example = "100")
     })
@@ -46,7 +46,7 @@ public class InventoryController {
     }
 
     @PutMapping("/parts/{partNumber}/quantity")
-    @Operation(summary = "Update Part Quantity", description = "Adjust quantity for a part at a location.", parameters = {
+    @Operation(summary = "Update Part Quantity", description = "Adjust quantity for a part at a location. Roles: EVM_Staff.", parameters = {
             @Parameter(name = "partNumber", description = "Part number", required = true, example = "BAT001"),
             @Parameter(name = "locationId", description = "Inventory location ID", required = true, example = "100"),
             @Parameter(name = "quantity", description = "New quantity value", required = true, example = "50")
@@ -63,7 +63,7 @@ public class InventoryController {
     }
 
     @PostMapping("/parts/{partNumber}/reserve")
-    @Operation(summary = "Reserve Parts for Claim", description = "Reserve a quantity of a part for a specific warranty claim.", parameters = {
+    @Operation(summary = "Reserve Parts for Claim", description = "Reserve a quantity of a part for a specific warranty claim. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "partNumber", description = "Part number", required = true, example = "BAT001"),
             @Parameter(name = "claimId", description = "Warranty claim ID", required = true, example = "2001"),
             @Parameter(name = "quantity", description = "Quantity to reserve", required = true, example = "2")
@@ -80,7 +80,7 @@ public class InventoryController {
     }
 
     @PostMapping("/parts/{partNumber}/release")
-    @Operation(summary = "Release Reserved Parts", description = "Release previously reserved parts for a claim.", parameters = {
+    @Operation(summary = "Release Reserved Parts", description = "Release previously reserved parts for a claim. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "partNumber", description = "Part number", required = true, example = "BAT001"),
             @Parameter(name = "claimId", description = "Warranty claim ID", required = true, example = "2001")
     })
@@ -95,7 +95,7 @@ public class InventoryController {
     }
 
     @GetMapping("/low-stock")
-    @Operation(summary = "Low Stock Parts", description = "Get parts at a location with quantity below a threshold.", parameters = {
+    @Operation(summary = "Low Stock Parts", description = "Get parts at a location with quantity below a threshold. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "locationId", description = "Inventory location ID", required = true, example = "100"),
             @Parameter(name = "threshold", description = "Threshold quantity", required = false, example = "10", schema = @Schema(defaultValue = "10"))
     })
@@ -110,7 +110,7 @@ public class InventoryController {
     }
 
     @GetMapping("/service-center/{serviceCenterId}")
-    @Operation(summary = "Service Center Inventory Locations", description = "List inventory locations for a service center.", parameters = {
+    @Operation(summary = "Service Center Inventory Locations", description = "List inventory locations for a service center. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "serviceCenterId", description = "Service center ID", required = true, example = "2") })
     public ResponseEntity<?> getServiceCenterInventory(@PathVariable("serviceCenterId") Long serviceCenterId) {
         try {
@@ -122,7 +122,7 @@ public class InventoryController {
     }
 
     @PostMapping("/transfer")
-    @Operation(summary = "Transfer Parts to Service Center", description = "Transfer parts from OEM inventory to a service center.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Transfer payload", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"partNumber\": \"BAT001\", \"quantity\": 5, \"oemInventoryId\": 10, \"serviceCenterId\": 2, \"transferReason\": \"Replenishment\"}"))))
+    @Operation(summary = "Transfer Parts to Service Center", description = "Transfer parts from OEM inventory to a service center. Roles: EVM_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Transfer payload", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(value = "{\"partNumber\": \"BAT001\", \"quantity\": 5, \"oemInventoryId\": 10, \"serviceCenterId\": 2, \"transferReason\": \"Replenishment\"}"))))
     public ResponseEntity<?> transferParts(@RequestBody Map<String, Object> body) {
         try {
             String partNumber = String.valueOf(body.get("partNumber"));

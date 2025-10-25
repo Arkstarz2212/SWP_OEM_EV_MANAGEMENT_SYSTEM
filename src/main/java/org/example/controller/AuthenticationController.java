@@ -10,6 +10,8 @@ import org.example.service.IService.IAuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,8 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,7 +41,7 @@ public class AuthenticationController {
     private IAuthenticationService authenticationService;
 
     @PostMapping("/login")
-    @Operation(summary = "User Login", description = "Authenticate user with email and password. Returns session token and user information on successful login.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Login credentials", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginRequest.class), examples = @ExampleObject(name = "Login Example", value = "{\"email\": \"admin@example.com\", \"password\": \"password123\"}"))))
+    @Operation(summary = "User Login", description = "Authenticate user with email and password. Returns session token and user information on successful login. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Login credentials", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = LoginRequest.class), examples = @ExampleObject(name = "Login Example", value = "{\"email\": \"admin@example.com\", \"password\": \"password123\"}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Login successful", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -211,7 +211,7 @@ public class AuthenticationController {
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Get Current User Info", description = "Get information about the currently authenticated user. Requires valid JWT token in Authorization header.")
+    @Operation(summary = "Get Current User Info", description = "Get information about the currently authenticated user. Requires valid JWT token in Authorization header. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User information retrieved successfully", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
             @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),

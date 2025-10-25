@@ -72,7 +72,7 @@ public class WarrantyClaimsController {
     }
 
     @PostMapping
-    @Operation(summary = "Create Draft Warranty Claim", description = "Create a new draft warranty claim for a vehicle. The claim can be submitted later for processing.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Warranty claim creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Claim Example", value = "{\"vehicleId\": 1, \"issueDescription\": \"Battery not holding charge\", \"dtcCode\": \"P0A80\", \"mileageKmAtClaim\": 15000}"))))
+    @Operation(summary = "Create Draft Warranty Claim", description = "Create a new draft warranty claim for a vehicle. Roles: Admin, SC_Staff. The claim can be submitted later for processing.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Warranty claim creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Claim Example", value = "{\"vehicleId\": 1, \"issueDescription\": \"Battery not holding charge\", \"dtcCode\": \"P0A80\", \"mileageKmAtClaim\": 15000}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Draft claim created successfully", content = @Content(schema = @Schema(implementation = WarrantyClaimDetailResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data")
@@ -142,7 +142,7 @@ public class WarrantyClaimsController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Claim Details", description = "Retrieve detailed information about a specific warranty claim including status and history.", parameters = {
+    @Operation(summary = "Get Claim Details", description = "Retrieve detailed information about a specific warranty claim including status and history. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", parameters = {
             @Parameter(name = "id", description = "Claim ID", required = true, example = "1")
     })
     @ApiResponses(value = {
@@ -159,7 +159,7 @@ public class WarrantyClaimsController {
     }
 
     @PostMapping("/{id}/submit")
-    @Operation(summary = "Submit Claim", description = "Submit a draft warranty claim to EVM (Electric Vehicle Manufacturer) for review and processing.", parameters = {
+    @Operation(summary = "Submit Claim", description = "Submit a draft warranty claim to EVM (Electric Vehicle Manufacturer) for review and processing. Roles: Admin, SC_Staff.", parameters = {
             @Parameter(name = "id", description = "Claim ID to submit", required = true, example = "1")
     })
     @ApiResponses(value = {
@@ -248,7 +248,7 @@ public class WarrantyClaimsController {
     }
 
     @PostMapping("/{id}/approve")
-    @Operation(summary = "Approve Claim", description = "Approve a warranty claim with approval notes and approver information.", parameters = {
+    @Operation(summary = "Approve Claim", description = "Approve a warranty claim with approval notes and approver information. Roles: Admin, EVM_Staff.", parameters = {
             @Parameter(name = "id", description = "Claim ID to approve", required = true, example = "1")
     }, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Approval data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Approve Claim Example", value = "{\"approvedBy\": 1, \"notes\": \"Approved for battery replacement\"}"))))
     @ApiResponses(value = {
@@ -293,7 +293,7 @@ public class WarrantyClaimsController {
     }
 
     @PostMapping("/{id}/reject")
-    @Operation(summary = "Reject Claim", description = "Reject a warranty claim with rejection reason and rejector information.", parameters = {
+    @Operation(summary = "Reject Claim", description = "Reject a warranty claim with rejection reason and rejector information. Roles: Admin, EVM_Staff.", parameters = {
             @Parameter(name = "id", description = "Claim ID to reject", required = true, example = "1")
     }, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Rejection data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Reject Claim Example", value = "{\"rejectedBy\": 1, \"reason\": \"Not covered under warranty\"}"))))
     @ApiResponses(value = {
@@ -338,7 +338,7 @@ public class WarrantyClaimsController {
     }
 
     @GetMapping
-    @Operation(summary = "List Warranty Claims", description = "Retrieve a list of warranty claims with optional filtering by status, vehicle, or service center.", parameters = {
+    @Operation(summary = "List Warranty Claims", description = "Retrieve a list of warranty claims with optional filtering by status, vehicle, or service center. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", parameters = {
             @Parameter(name = "status", description = "Filter by claim status", required = false, example = "DRAFT", schema = @Schema(allowableValues = {
                     "DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "COMPLETED" })),
             @Parameter(name = "vehicleId", description = "Filter by vehicle ID", required = false, example = "1"),
@@ -390,7 +390,7 @@ public class WarrantyClaimsController {
     }
 
     @PostMapping("/{id}/assign")
-    @Operation(summary = "Assign Technician to Claim", description = "Assign a technician to handle a specific warranty claim.", parameters = {
+    @Operation(summary = "Assign Technician to Claim", description = "Assign a technician to handle a specific warranty claim. Roles: Admin, SC_Staff.", parameters = {
             @Parameter(name = "id", description = "Claim ID to assign technician to", required = true, example = "1")
     }, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Technician assignment data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Assign Technician Example", value = "{\"technicianId\": 123, \"assignmentNotes\": \"Senior technician with battery expertise\", \"estimatedHours\": 8}"))))
     @ApiResponses(value = {
@@ -442,7 +442,7 @@ public class WarrantyClaimsController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete Warranty Claim", description = "Delete a warranty claim by its ID. This action cannot be undone.")
+    @Operation(summary = "Delete Warranty Claim", description = "Delete a warranty claim by its ID. Roles: Admin only. This action cannot be undone.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Claim deleted successfully", content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "404", description = "Claim not found", content = @Content(schema = @Schema(implementation = Map.class))),
@@ -468,7 +468,7 @@ public class WarrantyClaimsController {
     }
 
     @PutMapping("/{id}/status")
-    @Operation(summary = "Update Claim Status", description = "Update the status of a warranty claim.")
+    @Operation(summary = "Update Claim Status", description = "Update the status of a warranty claim. Roles: Admin, SC_Staff (limited transitions).")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Claim status updated successfully", content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "404", description = "Claim not found", content = @Content(schema = @Schema(implementation = Map.class))),
@@ -498,7 +498,7 @@ public class WarrantyClaimsController {
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Get All Warranty Claims", description = "Retrieve all warranty claims with pagination support.")
+    @Operation(summary = "Get All Warranty Claims", description = "Retrieve all warranty claims with pagination support. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Claims retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyClaimResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid parameters", content = @Content(schema = @Schema(implementation = Map.class))),

@@ -52,7 +52,7 @@ public class UsersController {
     private IJwtService jwtService;
 
     @PostMapping
-    @Operation(summary = "Create New User", description = "Create a new user account with specified role and profile information. Required fields: email, password, fullName, role. Optional: serviceCenterId, phone, address, mfaEnabled.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "User creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create User Example", value = "{\"email\": \"user@example.com\", \"password\": \"password123\", \"fullName\": \"John Doe\", \"role\": \"SC_Staff\", \"serviceCenterId\": 1, \"phone\": \"+1234567890\", \"address\": \"123 Main St\", \"mfaEnabled\": false}"))))
+    @Operation(summary = "Create New User", description = "Create a new user account with specified role and profile information. Roles: Admin only. Required fields: email, password, fullName, role. Optional: serviceCenterId, phone, address, mfaEnabled.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "User creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create User Example", value = "{\"email\": \"user@example.com\", \"password\": \"password123\", \"fullName\": \"John Doe\", \"role\": \"SC_Staff\", \"serviceCenterId\": 1, \"phone\": \"+1234567890\", \"address\": \"123 Main St\", \"mfaEnabled\": false}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User created successfully", content = @Content(schema = @Schema(implementation = UserResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data or validation errors", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -217,7 +217,7 @@ public class UsersController {
     }
 
     @GetMapping
-    @Operation(summary = "List Users", description = "Retrieve a paginated list of users with optional filtering by role or service center. Supports pagination with limit and offset parameters.", parameters = {
+    @Operation(summary = "List Users", description = "Retrieve a paginated list of users with optional filtering by role or service center. Roles: Admin only. Supports pagination with limit and offset parameters.", parameters = {
             @Parameter(name = "role", description = "Filter by user role", required = false, example = "SC_Staff", schema = @Schema(allowableValues = {
                     "Admin", "EVM_Staff", "SC_Staff", "SC_Technician" })),
             @Parameter(name = "serviceCenterId", description = "Filter by service center ID", required = false, example = "1"),
@@ -277,7 +277,7 @@ public class UsersController {
     }
 
     @PutMapping("/{id}/profile")
-    @Operation(summary = "Update User Profile", description = "Update user profile information including personal details, contact information, and preferences.", parameters = {
+    @Operation(summary = "Update User Profile", description = "Update user profile information including personal details, contact information, and preferences. Roles: Admin only.", parameters = {
             @Parameter(name = "id", description = "User ID to update", required = true, example = "1")
     }, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated profile information", required = true, content = @Content(schema = @Schema(implementation = ProfileUpdateRequest.class))))
     @ApiResponses(value = {
@@ -314,7 +314,7 @@ public class UsersController {
     }
 
     @PutMapping("/{id}/role")
-    @Operation(summary = "Update User Role", description = "Update the role of a specific user. Valid roles: Admin, EVM_Staff, SC_Staff, SC_Technician.", parameters = {
+    @Operation(summary = "Update User Role", description = "Update the role of a specific user. Roles: Admin only. Valid roles: Admin, EVM_Staff, SC_Staff, SC_Technician.", parameters = {
             @Parameter(name = "id", description = "User ID to update", required = true, example = "1"),
             @Parameter(name = "role", description = "New role for the user", required = true, example = "SC_Staff", schema = @Schema(allowableValues = {
                     "Admin", "EVM_Staff", "SC_Staff", "SC_Technician" }))
@@ -359,7 +359,7 @@ public class UsersController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete User", description = "Delete a user by their ID. This action cannot be undone.")
+    @Operation(summary = "Delete User", description = "Delete a user by their ID. Roles: Admin only. This action cannot be undone.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User deleted successfully", content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -387,7 +387,7 @@ public class UsersController {
     }
 
     @PutMapping("/{id}/status")
-    @Operation(summary = "Update User Status", description = "Update the active status of a user (activate/deactivate).")
+    @Operation(summary = "Update User Status", description = "Update the active status of a user (activate/deactivate). Roles: Admin only.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User status updated successfully", content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -417,7 +417,7 @@ public class UsersController {
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Get All Users", description = "Retrieve all users with pagination support.")
+    @Operation(summary = "Get All Users", description = "Retrieve all users with pagination support. Roles: Admin only.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users retrieved successfully", content = @Content(schema = @Schema(implementation = UserResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid parameters", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),

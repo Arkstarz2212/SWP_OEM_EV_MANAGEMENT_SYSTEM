@@ -1,0 +1,69 @@
+AOEM API LIST & ROLE PERMISSIONS (FULL ROLE NAMES)
+
+ROLES:
+- Admin: Quản trị viên hệ thống, toàn quyền.
+- SC Staff: Nhân viên trung tâm dịch vụ (Service Center Staff).
+- SC Technician: Kỹ thuật viên trung tâm (Service Center Technician).
+- EVM Staff: Nhân viên hãng sản xuất (OEM / EVM Staff).
+
+=== AUTHENTICATION & USER MANAGEMENT ===
+POST /api/auth/login                     → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅
+GET  /api/auth/me                        → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅
+POST /api/users                          → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+GET  /api/users                          → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+PUT  /api/users/{id}                     → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+DELETE /api/users/{id}                   → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+PUT  /api/users/{id}/role                → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+PUT  /api/users/{id}/status              → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+
+=== SERVICE CENTER MANAGEMENT ===
+GET  /api/service-centers                → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+POST /api/service-centers                → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+PUT  /api/service-centers/{id}           → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+DELETE /api/service-centers/{id}         → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+
+=== VEHICLE MANAGEMENT ===
+GET  /api/vehicles                       → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+GET  /api/vehicles/{vin}                 → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅
+POST /api/vehicles                       → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+PUT  /api/vehicles/{vin}                 → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+DELETE /api/vehicles/{vin}               → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+
+=== WARRANTY CLAIM MANAGEMENT ===
+GET  /api/claims                         → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅
+GET  /api/claims/{id}                    → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅
+POST /api/claims                         → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+PUT  /api/claims/{id}                    → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+POST /api/claims/{id}/submit             → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+POST /api/claims/{id}/assign             → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+POST /api/claims/{id}/approve            → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff✅
+POST /api/claims/{id}/reject             → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff✅
+POST /api/claims/{id}/cancel             → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff❌
+
+=== SERVICE RECORDS ===
+GET  /api/service-records                → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅
+POST /api/service-records                → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff❌
+POST /api/service-records/{id}/handover  → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff❌
+DELETE /api/service-records/{id}         → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff❌
+
+=== INVENTORY & SHIPMENTS ===
+GET  /api/inventory/parts                → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+POST /api/inventory/parts                → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff✅
+POST /api/inventory/parts/{partNo}/reserve → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+POST /api/inventory/parts/{partNo}/release → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+GET  /api/shipments                      → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+POST /api/shipments                      → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff✅
+POST /api/shipments/{id}/deliver         → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+
+=== WARRANTY POLICY & PARTS CATALOG ===
+GET  /api/warranty-policies              → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅
+POST /api/warranty-policies              → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff✅
+PUT  /api/warranty-policies/{id}         → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff✅
+DELETE /api/warranty-policies/{id}       → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff✅
+GET  /api/parts-catalog                  → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅
+POST /api/parts-catalog                  → Admin✅ | SC Staff❌ | SC Technician❌ | EVM Staff✅
+
+=== REPORTING & DASHBOARD ===
+GET  /api/reports/claims-summary         → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+GET  /api/reports/inventory-status       → Admin✅ | SC Staff✅ | SC Technician❌ | EVM Staff✅
+GET  /api/reports/performance            → Admin✅ | SC Staff✅ | SC Technician✅ | EVM Staff✅

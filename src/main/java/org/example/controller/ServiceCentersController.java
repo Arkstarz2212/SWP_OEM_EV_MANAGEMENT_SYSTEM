@@ -36,7 +36,7 @@ public class ServiceCentersController {
     private IServiceCenterService serviceCenterService;
 
     @PostMapping
-    @Operation(summary = "Create Service Center", description = "Create a new service center with location, contact information, and regional details.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Service center creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Service Center Example", value = "{\"code\": \"SC001\", \"name\": \"Downtown Service Center\", \"region\": \"North\", \"email\": \"downtown@service.com\", \"phone\": \"+1234567890\", \"address\": \"123 Main St, City, State\"}"))))
+    @Operation(summary = "Create Service Center", description = "Create a new service center with location, contact information, and regional details. Roles: Admin, SC_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Service center creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Service Center Example", value = "{\"code\": \"SC001\", \"name\": \"Downtown Service Center\", \"region\": \"North\", \"email\": \"downtown@service.com\", \"phone\": \"+1234567890\", \"address\": \"123 Main St, City, State\"}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Service center created successfully", content = @Content(schema = @Schema(implementation = ServiceCenterResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data")
@@ -75,7 +75,7 @@ public class ServiceCentersController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Service Center by ID", description = "Retrieve detailed information about a specific service center by its ID.", parameters = {
+    @Operation(summary = "Get Service Center by ID", description = "Retrieve detailed information about a specific service center by its ID. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "id", description = "Service center ID", required = true, example = "1")
     })
     @ApiResponses(value = {
@@ -92,7 +92,7 @@ public class ServiceCentersController {
     }
 
     @GetMapping("/region/{region}")
-    @Operation(summary = "Get Service Centers by Region", description = "Retrieve all service centers in a specific region.", parameters = {
+    @Operation(summary = "Get Service Centers by Region", description = "Retrieve all service centers in a specific region. Roles: Admin, SC_Staff, EVM_Staff.", parameters = {
             @Parameter(name = "region", description = "Region name", required = true, example = "North")
     })
     @ApiResponses(value = {
@@ -205,7 +205,7 @@ public class ServiceCentersController {
     }
 
     @PutMapping("/{id}/status")
-    @Operation(summary = "Update Service Center Status", description = "Update the active status of a service center (activate/deactivate).")
+    @Operation(summary = "Update Service Center Status", description = "Update the active status of a service center (activate/deactivate). Roles: Admin, SC_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Service center status updated successfully", content = @Content(schema = @Schema(implementation = Map.class))),
             @ApiResponse(responseCode = "404", description = "Service center not found", content = @Content(schema = @Schema(implementation = Map.class))),
@@ -234,7 +234,7 @@ public class ServiceCentersController {
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Get All Service Centers", description = "Retrieve all service centers with pagination support.")
+    @Operation(summary = "Get All Service Centers", description = "Retrieve all service centers with pagination support. Roles: Admin, SC_Staff, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Service centers retrieved successfully", content = @Content(schema = @Schema(implementation = ServiceCenterResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid parameters", content = @Content(schema = @Schema(implementation = Map.class))),

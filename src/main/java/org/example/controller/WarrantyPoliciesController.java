@@ -37,7 +37,7 @@ public class WarrantyPoliciesController {
     private IWarrantyPolicyService warrantyPolicyService;
 
     @PostMapping
-    @Operation(summary = "Create New Warranty Policy", description = "Create a new warranty policy for a specific OEM manufacturer with coverage details and effective dates.")
+    @Operation(summary = "Create New Warranty Policy", description = "Create a new warranty policy for a specific OEM manufacturer with coverage details and effective dates. Roles: EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Warranty policy created successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -60,7 +60,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get Warranty Policy by ID", description = "Retrieve detailed information about a specific warranty policy by its unique identifier.")
+    @Operation(summary = "Get Warranty Policy by ID", description = "Retrieve detailed information about a specific warranty policy by its unique identifier. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Warranty policy retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
             @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -81,7 +81,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/by-code/{policyCode}")
-    @Operation(summary = "Get Warranty Policy by Code", description = "Retrieve warranty policy information using the policy code.")
+    @Operation(summary = "Get Warranty Policy by Code", description = "Retrieve warranty policy information using the policy code. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Warranty policy retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
             @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -102,7 +102,7 @@ public class WarrantyPoliciesController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update Warranty Policy", description = "Update existing warranty policy details including coverage terms and effective dates.")
+    @Operation(summary = "Update Warranty Policy", description = "Update existing warranty policy details including coverage terms and effective dates. Roles: EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Warranty policy updated successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
             @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -125,7 +125,7 @@ public class WarrantyPoliciesController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete Warranty Policy", description = "Remove a warranty policy from the system. Cannot delete default policies or those referenced by active claims.")
+    @Operation(summary = "Delete Warranty Policy", description = "Remove a warranty policy from the system. Roles: EVM_Staff. Cannot delete default policies or those referenced by active claims.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Warranty policy deleted successfully"),
             @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -156,7 +156,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping
-    @Operation(summary = "List All Warranty Policies", description = "Retrieve a paginated list of all warranty policies in the system.")
+    @Operation(summary = "List All Warranty Policies", description = "Retrieve a paginated list of all warranty policies in the system. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Warranty policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
     })
@@ -174,7 +174,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/oem/{oemId}")
-    @Operation(summary = "Get Warranty Policies by OEM", description = "Retrieve all warranty policies for a specific OEM manufacturer.")
+    @Operation(summary = "Get Warranty Policies by OEM", description = "Retrieve all warranty policies for a specific OEM manufacturer. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Warranty policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
     })
@@ -194,7 +194,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/active")
-    @Operation(summary = "Get Active Warranty Policies", description = "Retrieve all currently active warranty policies.")
+    @Operation(summary = "Get Active Warranty Policies", description = "Retrieve all currently active warranty policies. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Active warranty policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
     })
@@ -212,7 +212,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/oem/{oemId}/active")
-    @Operation(summary = "Get Active Warranty Policies by OEM", description = "Retrieve all active warranty policies for a specific OEM manufacturer.")
+    @Operation(summary = "Get Active Warranty Policies by OEM", description = "Retrieve all active warranty policies for a specific OEM manufacturer. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Active warranty policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
     })
@@ -232,7 +232,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Search Warranty Policies", description = "Search warranty policies by policy name or code using keywords.")
+    @Operation(summary = "Search Warranty Policies", description = "Search warranty policies by policy name or code using keywords. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Search results retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
     })
@@ -252,7 +252,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/oem/{oemId}/default")
-    @Operation(summary = "Get Default Policy by OEM", description = "Retrieve the default warranty policy for a specific OEM manufacturer.")
+    @Operation(summary = "Get Default Policy by OEM", description = "Retrieve the default warranty policy for a specific OEM manufacturer. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Default warranty policy retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
             @ApiResponse(responseCode = "404", description = "No default policy found for OEM", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -273,7 +273,7 @@ public class WarrantyPoliciesController {
     }
 
     @PutMapping("/{id}/set-default")
-    @Operation(summary = "Set Default Policy", description = "Set a warranty policy as the default policy for its OEM manufacturer.")
+    @Operation(summary = "Set Default Policy", description = "Set a warranty policy as the default policy for its OEM manufacturer. Roles: EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Policy set as default successfully"),
             @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -301,7 +301,7 @@ public class WarrantyPoliciesController {
     }
 
     @PutMapping("/{id}/status")
-    @Operation(summary = "Update Policy Status", description = "Activate or deactivate a warranty policy.")
+    @Operation(summary = "Update Policy Status", description = "Activate or deactivate a warranty policy. Roles: EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Policy status updated successfully"),
             @ApiResponse(responseCode = "404", description = "Warranty policy not found", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -329,7 +329,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/analytics/coverage")
-    @Operation(summary = "Get Policies by Coverage", description = "Retrieve warranty policies filtered by coverage duration or mileage.")
+    @Operation(summary = "Get Policies by Coverage", description = "Retrieve warranty policies filtered by coverage duration or mileage. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Policies retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
     })
@@ -356,7 +356,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/oem/{oemId}/analytics/comparison")
-    @Operation(summary = "Compare Policies by OEM", description = "Retrieve and compare all warranty policies for an OEM manufacturer.")
+    @Operation(summary = "Compare Policies by OEM", description = "Retrieve and compare all warranty policies for an OEM manufacturer. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Policy comparison retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class)))
     })
@@ -373,7 +373,7 @@ public class WarrantyPoliciesController {
     }
 
     @GetMapping("/oem/{oemId}/analytics/most-generous")
-    @Operation(summary = "Get Most Generous Policy by OEM", description = "Find the warranty policy with the most generous coverage terms for an OEM.")
+    @Operation(summary = "Get Most Generous Policy by OEM", description = "Find the warranty policy with the most generous coverage terms for an OEM. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Most generous policy retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
             @ApiResponse(responseCode = "404", description = "No active policies found for OEM", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
