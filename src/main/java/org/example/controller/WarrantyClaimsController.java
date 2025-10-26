@@ -481,8 +481,25 @@ public class WarrantyClaimsController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid claim ID"));
             }
 
-            ClaimStatus claimStatus = ClaimStatus.valueOf(status.toUpperCase());
-            boolean updated = warrantyClaimService.updateClaimStatus(id, claimStatus, "Status updated via API", null);
+            // Get user ID from session for audit trail
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
+                    .currentRequestAttributes();
+            HttpServletRequest request = attributes.getRequest();
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Missing or invalid Authorization header"));
+            }
+            String token = authHeader.substring("Bearer ".length()).trim();
+            Map<String, Object> session = authenticationService.getSessionByToken(token);
+            if (session == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Invalid or expired session"));
+            }
+            Long userId = (Long) session.get("userId");
+
+            ClaimStatus claimStatus = ClaimStatus.valueOf(status.toLowerCase());
+            boolean updated = warrantyClaimService.updateClaimStatus(id, claimStatus, "Status updated via API", userId);
             if (updated) {
                 return ResponseEntity.ok(Map.of("success", true, "message", "Claim status updated successfully"));
             } else {

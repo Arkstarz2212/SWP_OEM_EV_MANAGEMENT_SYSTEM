@@ -380,7 +380,7 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         log.setClaimId(claim.getId());
         log.setFromStatus(old);
         log.setToStatus(newStatus);
-        log.setChangedByUserId(updatedById);
+        log.setChangedByUserId(updatedById != null ? updatedById : 0L); // Use 0L as default if null
         log.setChangedAt(OffsetDateTime.now());
         statusLogService.log(log);
         return true;
