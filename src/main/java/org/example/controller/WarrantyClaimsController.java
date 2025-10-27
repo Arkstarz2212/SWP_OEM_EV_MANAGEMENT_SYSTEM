@@ -72,7 +72,7 @@ public class WarrantyClaimsController {
     }
 
     @PostMapping
-    @Operation(summary = "Create Draft Warranty Claim", description = "Create a new draft warranty claim for a vehicle. Roles: Admin, SC_Staff. The claim can be submitted later for processing.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Warranty claim creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Claim Example", value = "{\"vehicleId\": 1, \"issueDescription\": \"Battery not holding charge\", \"dtcCode\": \"P0A80\", \"mileageKmAtClaim\": 15000}"))))
+    @Operation(summary = "Create Draft Warranty Claim", description = "Create a new draft warranty claim for a vehicle. Roles: SC_Staff. The claim can be submitted later for processing.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Warranty claim creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Claim Example", value = "{\"vehicleId\": 1, \"issueDescription\": \"Battery not holding charge\", \"dtcCode\": \"P0A80\", \"mileageKmAtClaim\": 15000}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Draft claim created successfully", content = @Content(schema = @Schema(implementation = WarrantyClaimDetailResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data")
