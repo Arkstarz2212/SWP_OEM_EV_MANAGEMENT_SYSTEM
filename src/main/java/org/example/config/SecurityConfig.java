@@ -40,14 +40,141 @@ public class SecurityConfig {
                                                 .authenticationEntryPoint(jsonAuthenticationEntryPoint)
                                                 .accessDeniedHandler(jsonAccessDeniedHandler))
                                 .authorizeHttpRequests(auth -> auth
+                                                // Public docs and health
                                                 .requestMatchers(
                                                                 "/api-docs/**",
                                                                 "/swagger-ui.html",
                                                                 "/swagger-ui/**",
                                                                 "/v3/api-docs/**",
-                                                                "/actuator/**",
-                                                                "/api/auth/**")
+                                                                "/actuator/**")
                                                 .permitAll()
+                                                // Auth endpoints
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/auth/login")
+                                                .permitAll()
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/auth/me")
+                                                .authenticated()
+                                                // Users - Admin only
+                                                .requestMatchers("/api/users/**").hasRole("Admin")
+                                                // Service Centers
+                                                .requestMatchers(org.springframework.http.HttpMethod.DELETE,
+                                                                "/api/service-centers/**")
+                                                .hasRole("Admin")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/service-centers/**")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.PUT,
+                                                                "/api/service-centers/**")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/service-centers/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "EVM_Staff")
+                                                // Vehicles
+                                                .requestMatchers(org.springframework.http.HttpMethod.DELETE,
+                                                                "/api/vehicles/**")
+                                                .hasRole("Admin")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/vehicles/**")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.PUT,
+                                                                "/api/vehicles/**")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/vehicles")
+                                                .hasAnyRole("Admin", "SC_Staff", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/vehicles/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "SC_Technician", "EVM_Staff")
+                                                // Warranty Claims
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/claims/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "SC_Technician", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/claims")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.PUT,
+                                                                "/api/claims/**")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.DELETE,
+                                                                "/api/claims/**")
+                                                .hasRole("Admin")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/claims/*/submit")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/claims/*/assign")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/claims/*/approve")
+                                                .hasAnyRole("Admin", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/claims/*/reject")
+                                                .hasAnyRole("Admin", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/claims/*/cancel")
+                                                .hasAnyRole("Admin", "SC_Staff")
+                                                // Service Records
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/service-records/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "SC_Technician", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/service-records/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "SC_Technician")
+                                                .requestMatchers(org.springframework.http.HttpMethod.DELETE,
+                                                                "/api/service-records/**")
+                                                .hasRole("Admin")
+                                                // Inventory
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/inventory/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/inventory/parts/*/reserve")
+                                                .hasAnyRole("Admin", "SC_Staff", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/inventory/parts/*/release")
+                                                .hasAnyRole("Admin", "SC_Staff", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/inventory/parts")
+                                                .hasRole("EVM_Staff")
+                                                // Shipments
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/shipments/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "EVM_Staff")
+                                                // deliver must be before general POST matcher
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/shipments/*/deliver")
+                                                .hasAnyRole("Admin", "SC_Staff", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/shipments/**")
+                                                .hasRole("EVM_Staff")
+                                                // Warranty Policies
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/warranty-policies/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "SC_Technician", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/warranty-policies/**")
+                                                .hasRole("EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.PUT,
+                                                                "/api/warranty-policies/**")
+                                                .hasRole("EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.DELETE,
+                                                                "/api/warranty-policies/**")
+                                                .hasRole("EVM_Staff")
+                                                // Parts catalog
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/parts/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "SC_Technician", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                                                "/api/parts/**")
+                                                .hasRole("EVM_Staff")
+                                                // Reports
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/reports/performance/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "SC_Technician", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                                                "/api/reports/**")
+                                                .hasAnyRole("Admin", "SC_Staff", "EVM_Staff")
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
