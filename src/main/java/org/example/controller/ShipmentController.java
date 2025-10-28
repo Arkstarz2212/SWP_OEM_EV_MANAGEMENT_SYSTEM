@@ -3,9 +3,13 @@ package org.example.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.example.models.enums.UserRole;
 import org.example.service.IService.IShipmentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,10 +33,53 @@ public class ShipmentController {
     @Autowired
     private IShipmentService shipmentService;
 
+    /**
+     * Helper method to convert role from session to UserRole enum
+     */
+    private UserRole convertToUserRole(Object roleObj) {
+        if (roleObj instanceof UserRole) {
+            return (UserRole) roleObj;
+        } else if (roleObj instanceof String) {
+            try {
+                return UserRole.valueOf((String) roleObj);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     @PostMapping
-    @Operation(summary = "Create Shipment", description = "Create a new shipment for parts delivery to a service center for a warranty claim. Roles: EVM_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Shipment creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Shipment Example", value = "{\"claimId\": 2001, \"serviceCenterId\": 2, \"partNumbers\": [\"BAT001\", \"MOTOR002\"], \"priority\": \"urgent\", \"notes\": \"Rush delivery for customer\"}"))))
+    @Operation(summary = "Create Shipment", description = "Create a new shipment for parts delivery to a service center for a warranty claim. Roles: EVM_Staff, Admin.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Shipment creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Shipment Example", value = "{\"claimId\": 2001, \"serviceCenterId\": 2, \"partNumbers\": [\"BAT001\", \"MOTOR002\"], \"priority\": \"urgent\", \"notes\": \"Rush delivery for customer\"}"))))
     public ResponseEntity<?> createShipment(@RequestBody Map<String, Object> body) {
         try {
+            // RBAC: Only EVM_Staff and Admin can create shipments
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Authentication required"));
+            }
+
+            // Get role from authentication details
+            Object details = authentication.getDetails();
+            if (details instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> authDetails = (Map<String, Object>) details;
+                Object roleObj = authDetails.get("role");
+                UserRole currentRole = convertToUserRole(roleObj);
+
+                if (currentRole == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
+                }
+                if (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "Only Admin or EVM_Staff can create shipments"));
+                }
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Invalid authentication details"));
+            }
+
             Long claimId = body.get("claimId") != null ? Long.valueOf(body.get("claimId").toString()) : null;
             Long serviceCenterId = body.get("serviceCenterId") != null
                     ? Long.valueOf(body.get("serviceCenterId").toString())

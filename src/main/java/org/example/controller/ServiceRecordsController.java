@@ -7,13 +7,14 @@ import java.util.Map;
 import org.example.models.core.ServiceRecord;
 import org.example.models.enums.ClaimStatus;
 import org.example.models.enums.UserRole;
-import org.example.service.IService.IAuthenticationService;
 import org.example.service.IService.IServiceRecordService;
 import org.example.service.IService.IWarrantyClaimService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,10 +24,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/service-records")
@@ -34,9 +31,6 @@ public class ServiceRecordsController {
 
     @Autowired
     private IServiceRecordService service;
-
-    @Autowired
-    private IAuthenticationService authenticationService;
 
     /**
      * Helper method to convert role from session to UserRole enum
@@ -62,35 +56,37 @@ public class ServiceRecordsController {
         try {
             // RBAC: Admin, EVM_Staff, SC_Staff can create service records; SC_Technician if
             // assigned
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(Map.of("error", "Authentication required"));
             }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            Object roleObj = session.get("role");
-            UserRole role = convertToUserRole(roleObj);
-            if (role == null) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
-            }
-            if (role == UserRole.SC_Technician) {
-                // allow if technician_id matches
-                Long userId = (Long) session.get("userId");
-                if (record.getTechnician_id() == null || !record.getTechnician_id().equals(userId)) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(Map.of("error", "Technician can only create records for themselves"));
+
+            // Get role from authentication details
+            Object details = authentication.getDetails();
+            if (details instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> authDetails = (Map<String, Object>) details;
+                Object roleObj = authDetails.get("role");
+                UserRole role = convertToUserRole(roleObj);
+
+                if (role == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
                 }
-            } else if (role != UserRole.Admin && role != UserRole.EVM_Staff && role != UserRole.SC_Staff) {
+                if (role == UserRole.SC_Technician) {
+                    // allow if technician_id matches
+                    Long userId = (Long) authDetails.get("userId");
+                    if (record.getTechnician_id() == null || !record.getTechnician_id().equals(userId)) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("error", "Technician can only create records for themselves"));
+                    }
+                } else if (role != UserRole.Admin && role != UserRole.EVM_Staff && role != UserRole.SC_Staff) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "Insufficient permissions to create service record"));
+                }
+            } else {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Insufficient permissions to create service record"));
+                        .body(Map.of("error", "Invalid authentication details"));
             }
             // Basic FK sanity checks (prevent obvious bad ids like 0/null)
             if (record.getVehicle_id() == null || record.getVehicle_id() <= 0) {
@@ -135,34 +131,36 @@ public class ServiceRecordsController {
     public ResponseEntity<?> update(@PathVariable Long id, @RequestBody ServiceRecord record) {
         try {
             // RBAC similar to create
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
+                        .body(Map.of("error", "Authentication required"));
             }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            Object roleObj = session.get("role");
-            UserRole role = convertToUserRole(roleObj);
-            if (role == null) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
-            }
-            if (role == UserRole.SC_Technician) {
-                Long userId = (Long) session.get("userId");
-                if (record.getTechnician_id() == null || !record.getTechnician_id().equals(userId)) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(Map.of("error", "Technician can only update their own records"));
+
+            // Get role from authentication details
+            Object details = authentication.getDetails();
+            if (details instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> authDetails = (Map<String, Object>) details;
+                Object roleObj = authDetails.get("role");
+                UserRole role = convertToUserRole(roleObj);
+
+                if (role == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
                 }
-            } else if (role != UserRole.Admin && role != UserRole.EVM_Staff && role != UserRole.SC_Staff) {
+                if (role == UserRole.SC_Technician) {
+                    Long userId = (Long) authDetails.get("userId");
+                    if (record.getTechnician_id() == null || !record.getTechnician_id().equals(userId)) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("error", "Technician can only update their own records"));
+                    }
+                } else if (role != UserRole.Admin && role != UserRole.EVM_Staff && role != UserRole.SC_Staff) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "Insufficient permissions to update service record"));
+                }
+            } else {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("error", "Insufficient permissions to update service record"));
+                        .body(Map.of("error", "Invalid authentication details"));
             }
             // Basic FK sanity checks
             if (record.getVehicle_id() != null && record.getVehicle_id() <= 0) {
@@ -224,25 +222,27 @@ public class ServiceRecordsController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         // RBAC: Admin only
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                .currentRequestAttributes();
-        HttpServletRequest request = attributes.getRequest();
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Missing or invalid Authorization header"));
+                    .body(Map.of("error", "Authentication required"));
         }
-        String token = authHeader.substring("Bearer ".length()).trim();
-        Map<String, Object> session = authenticationService.getSessionByToken(token);
-        if (session == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Invalid or expired session"));
+
+        // Get role from authentication details
+        Object details = authentication.getDetails();
+        if (details instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> authDetails = (Map<String, Object>) details;
+            Object roleObj = authDetails.get("role");
+            UserRole role = convertToUserRole(roleObj);
+
+            if (role == null || role != UserRole.Admin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Admin only"));
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid authentication details"));
         }
-        Object roleObj = session.get("role");
-        UserRole role = convertToUserRole(roleObj);
-        if (role == null || role != UserRole.Admin) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Admin only"));
-        }
+
         service.delete(id);
         return ResponseEntity.ok(Map.of("success", true));
     }
@@ -253,50 +253,54 @@ public class ServiceRecordsController {
             @RequestParam(value = "completeClaim", required = false, defaultValue = "false") boolean completeClaim) {
         try {
             // RBAC: Admin, EVM_Staff, SC_Staff, SC_Technician (own) can handover
-            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
-                    .currentRequestAttributes();
-            HttpServletRequest request = attributes.getRequest();
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Missing or invalid Authorization header"));
-            }
-            String token = authHeader.substring("Bearer ".length()).trim();
-            Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "Invalid or expired session"));
-            }
-            Object roleObj = session.get("role");
-            UserRole role = convertToUserRole(roleObj);
-            if (role == null) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
+                        .body(Map.of("error", "Authentication required"));
             }
 
-            // Read current record by id
-            ServiceRecord current = service.getById(id);
-            if (current == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Service record not found"));
-            }
-            if (role == UserRole.SC_Technician) {
-                Long userId = (Long) session.get("userId");
-                if (current.getTechnician_id() == null || !current.getTechnician_id().equals(userId)) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(Map.of("error", "Technician can only handover own records"));
+            // Get role from authentication details
+            Object details = authentication.getDetails();
+            if (details instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> authDetails = (Map<String, Object>) details;
+                Object roleObj = authDetails.get("role");
+                UserRole role = convertToUserRole(roleObj);
+
+                if (role == null) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Invalid user role"));
                 }
-            }
-            OffsetDateTime handoverAt = time != null ? OffsetDateTime.parse(time) : OffsetDateTime.now();
-            current.setHandover_at(handoverAt);
-            service.update(current);
 
-            if (completeClaim && current.getClaim_id() != null) {
-                Long userId = (Long) session.get("userId");
-                warrantyClaimService.updateClaimStatus(current.getClaim_id(), ClaimStatus.completed, "handover",
-                        userId);
-            }
+                // Read current record by id
+                ServiceRecord current = service.getById(id);
+                if (current == null) {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                            .body(Map.of("error", "Service record not found"));
+                }
+                if (role == UserRole.SC_Technician) {
+                    Long userId = (Long) authDetails.get("userId");
+                    if (current.getTechnician_id() == null || !current.getTechnician_id().equals(userId)) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(Map.of("error", "Technician can only handover own records"));
+                    }
+                }
+                OffsetDateTime handoverAt = time != null ? OffsetDateTime.parse(time) : OffsetDateTime.now();
+                current.setHandover_at(handoverAt);
+                service.update(current);
 
-            return ResponseEntity.ok(Map.of("success", true, "handover_at", handoverAt.toString(), "claim_completed",
-                    completeClaim && current.getClaim_id() != null));
+                if (completeClaim && current.getClaim_id() != null) {
+                    Long userId = (Long) authDetails.get("userId");
+                    warrantyClaimService.updateClaimStatus(current.getClaim_id(), ClaimStatus.completed, "handover",
+                            userId);
+                }
+
+                return ResponseEntity
+                        .ok(Map.of("success", true, "handover_at", handoverAt.toString(), "claim_completed",
+                                completeClaim && current.getClaim_id() != null));
+            } else {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "Invalid authentication details"));
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
