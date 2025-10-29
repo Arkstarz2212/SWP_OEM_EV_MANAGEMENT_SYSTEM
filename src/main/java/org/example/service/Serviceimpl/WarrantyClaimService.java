@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.example.models.core.ClaimStatusHistory;
+import org.example.models.core.ServiceCenter;
+import org.example.models.core.User;
 import org.example.models.core.Vehicle;
 import org.example.models.core.WarrantyClaim;
 import org.example.models.dto.request.AddClaimAttachmentRequest;
@@ -19,6 +21,8 @@ import org.example.models.dto.response.WarrantyClaimDetailResponse;
 import org.example.models.dto.response.WarrantyClaimResponse;
 import org.example.models.enums.ClaimStatus;
 import org.example.models.json.WarrantyInfo;
+import org.example.repository.IRepository.IServiceCenterRepository;
+import org.example.repository.IRepository.IUserRepository;
 import org.example.repository.IRepository.IVehicleRepository;
 import org.example.repository.IRepository.IWarrantyClaimRepository;
 import org.example.service.IService.IWarrantyClaimService;
@@ -33,6 +37,12 @@ public class WarrantyClaimService implements IWarrantyClaimService {
 
     @Autowired
     private IVehicleRepository vehicleRepository;
+
+    @Autowired
+    private IServiceCenterRepository serviceCenterRepository;
+
+    @Autowired
+    private IUserRepository userRepository;
 
     @Autowired
     private org.example.service.IService.IClaimStatusLogService statusLogService;
@@ -447,6 +457,53 @@ public class WarrantyClaimService implements IWarrantyClaimService {
         res.setCreatedByUserId(claim.getCreatedByUserId());
         res.setAssignedTechnicianId(claim.getAssignedTechnicianId());
         res.setEvmReviewerUserId(claim.getEvmReviewerUserId());
+
+        // Get vehicle information
+        if (claim.getVehicleId() != null) {
+            Optional<Vehicle> vehicleOpt = vehicleRepository.findById(claim.getVehicleId());
+            if (vehicleOpt.isPresent()) {
+                Vehicle vehicle = vehicleOpt.get();
+                res.setVehicleVin(vehicle.getVin());
+                res.setVehicleModel(vehicle.getModel());
+            }
+        }
+
+        // Get service center information
+        if (claim.getServiceCenterId() != null) {
+            Optional<ServiceCenter> serviceCenterOpt = serviceCenterRepository.findById(claim.getServiceCenterId());
+            if (serviceCenterOpt.isPresent()) {
+                ServiceCenter serviceCenter = serviceCenterOpt.get();
+                res.setServiceCenterName(serviceCenter.getName());
+            }
+        }
+
+        // Get created by user information
+        if (claim.getCreatedByUserId() != null) {
+            Optional<User> userOpt = userRepository.findById(claim.getCreatedByUserId());
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                res.setCreatedByUserName(user.getFullName());
+            }
+        }
+
+        // Get assigned technician information
+        if (claim.getAssignedTechnicianId() != null) {
+            Optional<User> technicianOpt = userRepository.findById(claim.getAssignedTechnicianId());
+            if (technicianOpt.isPresent()) {
+                User technician = technicianOpt.get();
+                res.setAssignedTechnicianName(technician.getFullName());
+            }
+        }
+
+        // Get EVM reviewer information
+        if (claim.getEvmReviewerUserId() != null) {
+            Optional<User> reviewerOpt = userRepository.findById(claim.getEvmReviewerUserId());
+            if (reviewerOpt.isPresent()) {
+                User reviewer = reviewerOpt.get();
+                res.setEvmReviewerName(reviewer.getFullName());
+            }
+        }
+
         return res;
     }
 
