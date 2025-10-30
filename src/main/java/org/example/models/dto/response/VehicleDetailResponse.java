@@ -20,59 +20,175 @@ public class VehicleDetailResponse {
     private List<WarrantyClaimInfo> warrantyClaims;
 
     // Getters and Setters
-    public Long getVehicleId() { return vehicleId; }
-    public void setVehicleId(Long vehicleId) { this.vehicleId = vehicleId; }
+    public Long getVehicleId() {
+        return vehicleId;
+    }
 
-    public String getVin() { return vin; }
-    public void setVin(String vin) { this.vin = vin; }
+    public void setVehicleId(Long vehicleId) {
+        this.vehicleId = vehicleId;
+    }
 
-    public String getModel() { return model; }
-    public void setModel(String model) { this.model = model; }
+    public String getVin() {
+        return vin;
+    }
 
-    public String getVariant() { return variant; }
-    public void setVariant(String variant) { this.variant = variant; }
+    public void setVin(String vin) {
+        this.vin = vin;
+    }
 
-    public Integer getModelYear() { return modelYear; }
-    public void setModelYear(Integer modelYear) { this.modelYear = modelYear; }
+    public String getModel() {
+        return model;
+    }
 
-    public Integer getCurrentOdometerKm() { return currentOdometerKm; }
-    public void setCurrentOdometerKm(Integer currentOdometerKm) { this.currentOdometerKm = currentOdometerKm; }
+    public void setModel(String model) {
+        this.model = model;
+    }
 
-    public LocalDate getWarrantyStartDate() { return warrantyStartDate; }
-    public void setWarrantyStartDate(LocalDate warrantyStartDate) { this.warrantyStartDate = warrantyStartDate; }
+    public String getVariant() {
+        return variant;
+    }
 
-    public LocalDate getWarrantyEndDate() { return warrantyEndDate; }
-    public void setWarrantyEndDate(LocalDate warrantyEndDate) { this.warrantyEndDate = warrantyEndDate; }
+    public void setVariant(String variant) {
+        this.variant = variant;
+    }
 
-    public String getWarrantyStatus() { return warrantyStatus; }
-    public void setWarrantyStatus(String warrantyStatus) { this.warrantyStatus = warrantyStatus; }
+    public Integer getModelYear() {
+        return modelYear;
+    }
 
-    public CustomerBasicInfo getCustomer() { return customer; }
-    public void setCustomer(CustomerBasicInfo customer) { this.customer = customer; }
+    public void setModelYear(Integer modelYear) {
+        this.modelYear = modelYear;
+    }
 
-    public List<ComponentInfo> getComponents() { return components; }
-    public void setComponents(List<ComponentInfo> components) { this.components = components; }
+    public Integer getCurrentOdometerKm() {
+        return currentOdometerKm;
+    }
 
-    public List<ServiceHistoryInfo> getServiceHistory() { return serviceHistory; }
-    public void setServiceHistory(List<ServiceHistoryInfo> serviceHistory) { this.serviceHistory = serviceHistory; }
+    public void setCurrentOdometerKm(Integer currentOdometerKm) {
+        this.currentOdometerKm = currentOdometerKm;
+    }
 
-    public List<WarrantyClaimInfo> getWarrantyClaims() { return warrantyClaims; }
-    public void setWarrantyClaims(List<WarrantyClaimInfo> warrantyClaims) { this.warrantyClaims = warrantyClaims; }
+    public LocalDate getWarrantyStartDate() {
+        return warrantyStartDate;
+    }
+
+    public void setWarrantyStartDate(LocalDate warrantyStartDate) {
+        this.warrantyStartDate = warrantyStartDate;
+    }
+
+    public LocalDate getWarrantyEndDate() {
+        return warrantyEndDate;
+    }
+
+    public void setWarrantyEndDate(LocalDate warrantyEndDate) {
+        this.warrantyEndDate = warrantyEndDate;
+    }
+
+    public String getWarrantyStatus() {
+        return warrantyStatus;
+    }
+
+    public void setWarrantyStatus(String warrantyStatus) {
+        this.warrantyStatus = warrantyStatus;
+    }
+
+    public CustomerBasicInfo getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(CustomerBasicInfo customer) {
+        this.customer = customer;
+    }
+
+    public List<ComponentInfo> getComponents() {
+        return components;
+    }
+
+    public void setComponents(List<ComponentInfo> components) {
+        this.components = components;
+    }
+
+    public List<ServiceHistoryInfo> getServiceHistory() {
+        return serviceHistory;
+    }
+
+    public void setServiceHistory(List<ServiceHistoryInfo> serviceHistory) {
+        this.serviceHistory = serviceHistory;
+    }
+
+    public List<WarrantyClaimInfo> getWarrantyClaims() {
+        return warrantyClaims;
+    }
+
+    public void setWarrantyClaims(List<WarrantyClaimInfo> warrantyClaims) {
+        this.warrantyClaims = warrantyClaims;
+    }
 
     // Nested classes
     public static class CustomerBasicInfo {
         private String fullName;
         private String phoneNumber;
         private String email;
+        private String address;
+        private String city;
+        private String province;
+        private String postalCode;
 
-        public String getFullName() { return fullName; }
-        public void setFullName(String fullName) { this.fullName = fullName; }
+        public String getFullName() {
+            return fullName;
+        }
 
-        public String getPhoneNumber() { return phoneNumber; }
-        public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+        public void setFullName(String fullName) {
+            this.fullName = fullName;
+        }
 
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
+        public String getPhoneNumber() {
+            return phoneNumber;
+        }
+
+        public void setPhoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public String getAddress() {
+            return address;
+        }
+
+        public void setAddress(String address) {
+            this.address = address;
+        }
+
+        public String getCity() {
+            return city;
+        }
+
+        public void setCity(String city) {
+            this.city = city;
+        }
+
+        public String getProvince() {
+            return province;
+        }
+
+        public void setProvince(String province) {
+            this.province = province;
+        }
+
+        public String getPostalCode() {
+            return postalCode;
+        }
+
+        public void setPostalCode(String postalCode) {
+            this.postalCode = postalCode;
+        }
     }
 
     public static class ComponentInfo {
@@ -81,17 +197,37 @@ public class VehicleDetailResponse {
         private String partNumber;
         private LocalDate installDate;
 
-        public String getComponentName() { return componentName; }
-        public void setComponentName(String componentName) { this.componentName = componentName; }
+        public String getComponentName() {
+            return componentName;
+        }
 
-        public String getSerialNumber() { return serialNumber; }
-        public void setSerialNumber(String serialNumber) { this.serialNumber = serialNumber; }
+        public void setComponentName(String componentName) {
+            this.componentName = componentName;
+        }
 
-        public String getPartNumber() { return partNumber; }
-        public void setPartNumber(String partNumber) { this.partNumber = partNumber; }
+        public String getSerialNumber() {
+            return serialNumber;
+        }
 
-        public LocalDate getInstallDate() { return installDate; }
-        public void setInstallDate(LocalDate installDate) { this.installDate = installDate; }
+        public void setSerialNumber(String serialNumber) {
+            this.serialNumber = serialNumber;
+        }
+
+        public String getPartNumber() {
+            return partNumber;
+        }
+
+        public void setPartNumber(String partNumber) {
+            this.partNumber = partNumber;
+        }
+
+        public LocalDate getInstallDate() {
+            return installDate;
+        }
+
+        public void setInstallDate(LocalDate installDate) {
+            this.installDate = installDate;
+        }
     }
 
     public static class ServiceHistoryInfo {
@@ -101,20 +237,45 @@ public class VehicleDetailResponse {
         private Integer odometerKm;
         private String description;
 
-        public LocalDate getServiceDate() { return serviceDate; }
-        public void setServiceDate(LocalDate serviceDate) { this.serviceDate = serviceDate; }
+        public LocalDate getServiceDate() {
+            return serviceDate;
+        }
 
-        public String getServiceType() { return serviceType; }
-        public void setServiceType(String serviceType) { this.serviceType = serviceType; }
+        public void setServiceDate(LocalDate serviceDate) {
+            this.serviceDate = serviceDate;
+        }
 
-        public String getServiceCenterName() { return serviceCenterName; }
-        public void setServiceCenterName(String serviceCenterName) { this.serviceCenterName = serviceCenterName; }
+        public String getServiceType() {
+            return serviceType;
+        }
 
-        public Integer getOdometerKm() { return odometerKm; }
-        public void setOdometerKm(Integer odometerKm) { this.odometerKm = odometerKm; }
+        public void setServiceType(String serviceType) {
+            this.serviceType = serviceType;
+        }
 
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
+        public String getServiceCenterName() {
+            return serviceCenterName;
+        }
+
+        public void setServiceCenterName(String serviceCenterName) {
+            this.serviceCenterName = serviceCenterName;
+        }
+
+        public Integer getOdometerKm() {
+            return odometerKm;
+        }
+
+        public void setOdometerKm(Integer odometerKm) {
+            this.odometerKm = odometerKm;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
+        }
     }
 
     public static class WarrantyClaimInfo {
@@ -123,16 +284,36 @@ public class VehicleDetailResponse {
         private String status;
         private String issueDescription;
 
-        public String getClaimNumber() { return claimNumber; }
-        public void setClaimNumber(String claimNumber) { this.claimNumber = claimNumber; }
+        public String getClaimNumber() {
+            return claimNumber;
+        }
 
-        public LocalDateTime getSubmitDate() { return submitDate; }
-        public void setSubmitDate(LocalDateTime submitDate) { this.submitDate = submitDate; }
+        public void setClaimNumber(String claimNumber) {
+            this.claimNumber = claimNumber;
+        }
 
-        public String getStatus() { return status; }
-        public void setStatus(String status) { this.status = status; }
+        public LocalDateTime getSubmitDate() {
+            return submitDate;
+        }
 
-        public String getIssueDescription() { return issueDescription; }
-        public void setIssueDescription(String issueDescription) { this.issueDescription = issueDescription; }
+        public void setSubmitDate(LocalDateTime submitDate) {
+            this.submitDate = submitDate;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
+        }
+
+        public String getIssueDescription() {
+            return issueDescription;
+        }
+
+        public void setIssueDescription(String issueDescription) {
+            this.issueDescription = issueDescription;
+        }
     }
 }

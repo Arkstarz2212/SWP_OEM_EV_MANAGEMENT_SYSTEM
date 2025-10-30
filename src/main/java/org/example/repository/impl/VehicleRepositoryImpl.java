@@ -27,12 +27,9 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
         vehicle.setOemId(rs.getLong("oem_id"));
         vehicle.setModel(rs.getString("model"));
         vehicle.setModelYear(rs.getInt("model_year"));
-        vehicle.setCustomerId(rs.getLong("customer_id"));
-        if (rs.wasNull()) {
-            vehicle.setCustomerId(null);
-        }
         vehicle.setVehicle_data(rs.getString("vehicle_data"));
         vehicle.setWarranty_info(rs.getString("warranty_info"));
+        vehicle.setCustomer_info(rs.getString("customer_info"));
         return vehicle;
     };
 
@@ -48,7 +45,7 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
     }
 
     private Vehicle insertVehicle(Vehicle vehicle) {
-        String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_id, vehicle_data, warranty_info) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_info, vehicle_data, warranty_info) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
@@ -57,11 +54,7 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
             ps.setLong(2, vehicle.getOemId());
             ps.setString(3, vehicle.getModel());
             ps.setInt(4, vehicle.getModelYear());
-            if (vehicle.getCustomerId() != null) {
-                ps.setLong(5, vehicle.getCustomerId());
-            } else {
-                ps.setNull(5, java.sql.Types.BIGINT);
-            }
+            ps.setString(5, vehicle.getCustomer_info());
             ps.setString(6, vehicle.getVehicle_data());
             ps.setString(7, vehicle.getWarranty_info());
             return ps;
@@ -75,14 +68,14 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
     }
 
     private Vehicle updateVehicle(Vehicle vehicle) {
-        String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_id = ?, vehicle_data = ?, warranty_info = ? WHERE id = ?";
+        String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_info = ?, vehicle_data = ?, warranty_info = ? WHERE id = ?";
 
         jdbcTemplate.update(sql,
                 vehicle.getVin(),
                 vehicle.getOemId(),
                 vehicle.getModel(),
                 vehicle.getModelYear(),
-                vehicle.getCustomerId(),
+                vehicle.getCustomer_info(),
                 vehicle.getVehicle_data(),
                 vehicle.getWarranty_info(),
                 vehicle.getId());

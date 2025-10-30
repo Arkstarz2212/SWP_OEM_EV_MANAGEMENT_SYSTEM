@@ -1,5 +1,6 @@
 package org.example.models.dto.request;
 
+import org.example.models.dto.nested.CustomerInfoRequest;
 import org.example.models.dto.nested.VehicleDataRequest;
 import org.example.models.dto.nested.WarrantyInfoRequest;
 
@@ -21,7 +22,8 @@ public class CreateVehicleRequest {
     @NotNull(message = "Năm sản xuất không được để trống")
     private Integer modelYear;
 
-    private Long customerId;
+    // Customer information - no longer using customerId mapping
+    private CustomerInfoRequest customerInfo;
 
     // Use nested DTOs for JSON fields
     private VehicleDataRequest vehicleData;
@@ -64,12 +66,12 @@ public class CreateVehicleRequest {
         this.modelYear = modelYear;
     }
 
-    public Long getCustomerId() {
-        return customerId;
+    public CustomerInfoRequest getCustomerInfo() {
+        return customerInfo;
     }
 
-    public void setCustomerId(Long customerId) {
-        this.customerId = customerId;
+    public void setCustomerInfo(CustomerInfoRequest customerInfo) {
+        this.customerInfo = customerInfo;
     }
 
     public VehicleDataRequest getVehicleData() {

@@ -1,12 +1,15 @@
 package org.example.models.dto.request;
 
+import org.example.models.dto.nested.CustomerInfoRequest;
 import org.example.models.dto.nested.VehicleDataRequest;
 import org.example.models.dto.nested.WarrantyInfoRequest;
 
 public class UpdateVehicleRequest {
     private String model; // core: Vehicle.model
     private Integer modelYear; // core: Vehicle.modelYear
-    private Long customerId; // core: Vehicle.customerId
+
+    // Customer information - no longer using customerId mapping
+    private CustomerInfoRequest customerInfo;
 
     // JSON fields mapped via nested DTOs (serialized into core Vehicle.vehicle_data
     // / warranty_info)
@@ -29,12 +32,12 @@ public class UpdateVehicleRequest {
         this.modelYear = modelYear;
     }
 
-    public Long getCustomerId() {
-        return customerId;
+    public CustomerInfoRequest getCustomerInfo() {
+        return customerInfo;
     }
 
-    public void setCustomerId(Long customerId) {
-        this.customerId = customerId;
+    public void setCustomerInfo(CustomerInfoRequest customerInfo) {
+        this.customerInfo = customerInfo;
     }
 
     public VehicleDataRequest getVehicleData() {

@@ -2,6 +2,7 @@ package org.example.models.core;
 
 import java.time.OffsetDateTime;
 
+import org.example.models.json.CustomerInfo;
 import org.example.models.json.VehicleData;
 import org.example.models.json.WarrantyInfo;
 
@@ -13,13 +14,14 @@ public class Vehicle {
     private Long oemId; // aoem.vehicles.oem_id
     private String model; // aoem.vehicles.model
     private Integer modelYear; // aoem.vehicles.model_year
-    private Long customerId; // aoem.vehicles.customer_id
+    private String customer_info; // aoem.vehicles.customer_info (JSON text) - direct customer info storage
     private String vehicle_data; // aoem.vehicles.vehicle_data (JSON text)
     private String warranty_info;// aoem.vehicles.warranty_info (JSON text)
 
     // Backward-compatible transient helpers
     private transient VehicleData vehicleDataCache;
     private transient WarrantyInfo warrantyInfoCache;
+    private transient CustomerInfo customerInfoCache;
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private transient OffsetDateTime createdAt;
 
@@ -75,12 +77,13 @@ public class Vehicle {
         this.modelYear = modelYear;
     }
 
-    public Long getCustomerId() {
-        return customerId;
+    public String getCustomer_info() {
+        return customer_info;
     }
 
-    public void setCustomerId(Long customerId) {
-        this.customerId = customerId;
+    public void setCustomer_info(String customer_info) {
+        this.customer_info = customer_info;
+        this.customerInfoCache = null; // Reset cache when raw data changes
     }
 
     public String getVehicle_data() {
@@ -143,6 +146,29 @@ public class Vehicle {
             }
         } else {
             this.warranty_info = null;
+        }
+    }
+
+    public CustomerInfo getCustomerInfo() {
+        if (customerInfoCache == null && customer_info != null) {
+            try {
+                customerInfoCache = objectMapper.readValue(customer_info, CustomerInfo.class);
+            } catch (Exception ignored) {
+            }
+        }
+        return customerInfoCache;
+    }
+
+    public void setCustomerInfo(CustomerInfo customerInfo) {
+        this.customerInfoCache = customerInfo;
+        if (customerInfo != null) {
+            try {
+                this.customer_info = objectMapper.writeValueAsString(customerInfo);
+            } catch (Exception ignored) {
+                this.customer_info = "{}";
+            }
+        } else {
+            this.customer_info = null;
         }
     }
 

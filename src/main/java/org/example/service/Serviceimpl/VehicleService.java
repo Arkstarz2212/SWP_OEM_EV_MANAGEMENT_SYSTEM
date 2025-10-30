@@ -12,6 +12,7 @@ import org.example.models.dto.request.VehicleRegisterRequest;
 import org.example.models.dto.request.VehicleSearchRequest;
 import org.example.models.dto.response.VehicleDetailResponse;
 import org.example.models.dto.response.VehicleResponse;
+import org.example.models.json.CustomerInfo;
 import org.example.models.json.VehicleData;
 import org.example.models.json.WarrantyInfo;
 import org.example.repository.IRepository.IVehicleRepository;
@@ -44,8 +45,21 @@ public class VehicleService implements IVehicleService {
         vehicle.setOemId(request.getOemId());
         vehicle.setModel(request.getModel());
         vehicle.setModelYear(request.getModelYear());
-        vehicle.setCustomerId(request.getCustomerId());
         vehicle.setCreatedAt(OffsetDateTime.now());
+
+        // Set customer info directly from request
+        if (request.getCustomerFullName() != null || request.getCustomerPhoneNumber() != null
+                || request.getCustomerEmail() != null) {
+            CustomerInfo customerInfo = new CustomerInfo();
+            customerInfo.setFullName(request.getCustomerFullName());
+            customerInfo.setPhoneNumber(request.getCustomerPhoneNumber());
+            customerInfo.setEmail(request.getCustomerEmail());
+            customerInfo.setAddress(request.getCustomerAddress());
+            customerInfo.setCity(request.getCustomerCity());
+            customerInfo.setProvince(request.getCustomerProvince());
+            customerInfo.setPostalCode(request.getCustomerPostalCode());
+            vehicle.setCustomerInfo(customerInfo);
+        }
 
         // Set vehicle data
         VehicleData vehicleData = new VehicleData();
@@ -101,8 +115,38 @@ public class VehicleService implements IVehicleService {
         if (request.getModelYear() != null) {
             vehicle.setModelYear(request.getModelYear());
         }
-        if (request.getCustomerId() != null) {
-            vehicle.setCustomerId(request.getCustomerId());
+
+        // Update customer info if provided
+        if (request.getCustomerFullName() != null || request.getCustomerPhoneNumber() != null
+                || request.getCustomerEmail() != null) {
+            CustomerInfo customerInfo = vehicle.getCustomerInfo();
+            if (customerInfo == null) {
+                customerInfo = new CustomerInfo();
+            }
+
+            if (request.getCustomerFullName() != null) {
+                customerInfo.setFullName(request.getCustomerFullName());
+            }
+            if (request.getCustomerPhoneNumber() != null) {
+                customerInfo.setPhoneNumber(request.getCustomerPhoneNumber());
+            }
+            if (request.getCustomerEmail() != null) {
+                customerInfo.setEmail(request.getCustomerEmail());
+            }
+            if (request.getCustomerAddress() != null) {
+                customerInfo.setAddress(request.getCustomerAddress());
+            }
+            if (request.getCustomerCity() != null) {
+                customerInfo.setCity(request.getCustomerCity());
+            }
+            if (request.getCustomerProvince() != null) {
+                customerInfo.setProvince(request.getCustomerProvince());
+            }
+            if (request.getCustomerPostalCode() != null) {
+                customerInfo.setPostalCode(request.getCustomerPostalCode());
+            }
+
+            vehicle.setCustomerInfo(customerInfo);
         }
 
         // Update vehicle data
@@ -193,8 +237,9 @@ public class VehicleService implements IVehicleService {
 
     @Override
     public List<VehicleResponse> getVehiclesByCustomer(Long customerId) {
-        List<Vehicle> vehicles = vehicleRepository.findByUserId(customerId);
-        return vehicles.stream().map(this::convertToVehicleResponse).toList();
+        // This method is deprecated since we no longer use customerId mapping
+        // Return empty list as customer info is now stored directly in vehicles
+        return new ArrayList<>();
     }
 
     @Override
@@ -364,16 +409,9 @@ public class VehicleService implements IVehicleService {
 
     @Override
     public boolean updateCustomerInfo(String vin, Long customerId) {
-        Optional<Vehicle> vehicleOpt = vehicleRepository.findByVin(vin);
-        if (vehicleOpt.isEmpty()) {
-            return false;
-        }
-
-        Vehicle vehicle = vehicleOpt.get();
-        vehicle.setCustomerId(customerId);
-        vehicleRepository.save(vehicle);
-
-        return true;
+        // This method is deprecated since we no longer use customerId mapping
+        // Customer info should be updated via updateVehicleInfo method
+        return false;
     }
 
     @Override
@@ -445,10 +483,15 @@ public class VehicleService implements IVehicleService {
         response.setVin(vehicle.getVin());
         response.setModel(vehicle.getModel());
         response.setModelYear(vehicle.getModelYear());
-        response.setCustomerId(vehicle.getCustomerId());
         response.setCreatedAt(vehicle.getCreatedAt());
         response.setOemId(vehicle.getOemId());
         response.setOemName("OEM " + vehicle.getOemId()); // TODO: Get real OEM name
+
+        // Set customer name from customer info
+        CustomerInfo customerInfo = vehicle.getCustomerInfo();
+        if (customerInfo != null && customerInfo.getFullName() != null) {
+            response.setCustomerName(customerInfo.getFullName());
+        }
 
         // Set vehicle data
         VehicleData vehicleData = vehicle.getVehicleData();
@@ -490,11 +533,18 @@ public class VehicleService implements IVehicleService {
             response.setWarrantyStatus(checkWarrantyStatus(vehicle.getVin()) ? "Active" : "Expired");
         }
 
-        // Set customer info
-        if (vehicle.getCustomerId() != null) {
-            VehicleDetailResponse.CustomerBasicInfo customerInfo = new VehicleDetailResponse.CustomerBasicInfo();
-            customerInfo.setFullName("Customer " + vehicle.getCustomerId()); // TODO: Get real customer name
-            response.setCustomer(customerInfo);
+        // Set customer info from direct customer info
+        CustomerInfo customerInfo = vehicle.getCustomerInfo();
+        if (customerInfo != null && customerInfo.getFullName() != null) {
+            VehicleDetailResponse.CustomerBasicInfo customerBasicInfo = new VehicleDetailResponse.CustomerBasicInfo();
+            customerBasicInfo.setFullName(customerInfo.getFullName());
+            customerBasicInfo.setPhoneNumber(customerInfo.getPhoneNumber());
+            customerBasicInfo.setEmail(customerInfo.getEmail());
+            customerBasicInfo.setAddress(customerInfo.getAddress());
+            customerBasicInfo.setCity(customerInfo.getCity());
+            customerBasicInfo.setProvince(customerInfo.getProvince());
+            customerBasicInfo.setPostalCode(customerInfo.getPostalCode());
+            response.setCustomer(customerBasicInfo);
         }
 
         // Set empty lists for now

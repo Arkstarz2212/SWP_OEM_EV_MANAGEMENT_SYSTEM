@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS aoem.vehicles (
     oem_id INTEGER NOT NULL REFERENCES aoem.oem_manufacturers(id),
     model VARCHAR(100) NOT NULL,
     model_year INTEGER NOT NULL,
-    customer_id INTEGER NULL REFERENCES aoem.users(id),
+    customer_info TEXT NULL, -- JSON field containing customer basic information (fullName, phoneNumber, email, address, city, province, postalCode)
     vehicle_data TEXT NULL, -- JSON
     warranty_info TEXT NULL -- JSON
 );
@@ -259,10 +259,10 @@ INSERT INTO aoem.users (email, password_hash, full_name, role, service_center_id
 ON CONFLICT (email) DO NOTHING;
 
 -- 6. VEHICLES
-INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_id, vehicle_data, warranty_info) VALUES
-('VF8ABC123456789012', 1, 'VF8', 2024, 8, '{"variant":"Plus","odometer_km":15000,"color":"White","purchase_date":"2024-01-15"}', '{"start_date":"2024-01-15","end_date":"2032-01-15","km_limit":160000,"policies":[{"component":"battery","months":96,"km":160000,"service_coverage":"free","parts_coverage":"free"},{"component":"motor","months":60,"km":100000,"service_coverage":"free","parts_coverage":"free"},{"component":"inverter","months":36,"km":80000,"service_coverage":"paid","parts_coverage":"free"}],"certificates":[{"number":"WC-VF8-001","status":"active","issue_date":"2024-01-15","expiry_date":"2032-01-15"}],"coverage_rules":{"out_of_warranty":{"service_coverage":"paid","parts_coverage":"paid"},"accident_damage":{"service_coverage":"paid","parts_coverage":"paid"},"normal_wear":{"service_coverage":"partial","parts_coverage":"paid"}}}'),
-('VF9XYZ987654321098', 1, 'VF9', 2024, 8, '{"variant":"Eco","odometer_km":8000,"color":"Blue","purchase_date":"2024-03-10"}', '{"start_date":"2024-03-10","end_date":"2032-03-10","km_limit":160000,"policies":[{"component":"battery","months":96,"km":160000,"service_coverage":"free","parts_coverage":"free"},{"component":"motor","months":60,"km":100000,"service_coverage":"free","parts_coverage":"free"}],"certificates":[{"number":"WC-VF9-001","status":"active","issue_date":"2024-03-10","expiry_date":"2032-03-10"}],"coverage_rules":{"out_of_warranty":{"service_coverage":"paid","parts_coverage":"paid"}}}'),
-('BYDHAN111222333444', 2, 'Han EV', 2024, NULL, '{"variant":"Standard","odometer_km":12000,"color":"Black","purchase_date":"2024-02-20"}', '{"start_date":"2024-02-20","end_date":"2030-02-20","km_limit":120000,"policies":[{"component":"battery","months":72,"km":120000}],"certificates":[{"number":"WC-BYD-001","status":"active"}]}')
+INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_info, vehicle_data, warranty_info) VALUES
+('VF8ABC123456789012', 1, 'VF8', 2024, '{"fullName":"Nguyễn Văn An","phoneNumber":"0901234567","email":"nguyenvanan@gmail.com","address":"123 Đường ABC, Phường 1","city":"Hà Nội","province":"Hà Nội","postalCode":"100000"}', '{"variant":"Plus","odometer_km":15000,"color":"White","purchase_date":"2024-01-15"}', '{"start_date":"2024-01-15","end_date":"2032-01-15","km_limit":160000,"policies":[{"component":"battery","months":96,"km":160000,"service_coverage":"free","parts_coverage":"free"},{"component":"motor","months":60,"km":100000,"service_coverage":"free","parts_coverage":"free"},{"component":"inverter","months":36,"km":80000,"service_coverage":"paid","parts_coverage":"free"}],"certificates":[{"number":"WC-VF8-001","status":"active","issue_date":"2024-01-15","expiry_date":"2032-01-15"}],"coverage_rules":{"out_of_warranty":{"service_coverage":"paid","parts_coverage":"paid"},"accident_damage":{"service_coverage":"paid","parts_coverage":"paid"},"normal_wear":{"service_coverage":"partial","parts_coverage":"paid"}}}'),
+('VF9XYZ987654321098', 1, 'VF9', 2024, '{"fullName":"Trần Thị Bình","phoneNumber":"0907654321","email":"tranthibinh@gmail.com","address":"456 Đường XYZ, Phường 2","city":"TP.HCM","province":"TP.HCM","postalCode":"700000"}', '{"variant":"Eco","odometer_km":8000,"color":"Blue","purchase_date":"2024-03-10"}', '{"start_date":"2024-03-10","end_date":"2032-03-10","km_limit":160000,"policies":[{"component":"battery","months":96,"km":160000,"service_coverage":"free","parts_coverage":"free"},{"component":"motor","months":60,"km":100000,"service_coverage":"free","parts_coverage":"free"}],"certificates":[{"number":"WC-VF9-001","status":"active","issue_date":"2024-03-10","expiry_date":"2032-03-10"}],"coverage_rules":{"out_of_warranty":{"service_coverage":"paid","parts_coverage":"paid"}}}'),
+('BYDHAN111222333444', 2, 'Han EV', 2024, '{"fullName":"Lê Minh Cường","phoneNumber":"0909876543","email":"leminhcuong@gmail.com","address":"789 Đường DEF, Phường 3","city":"Đà Nẵng","province":"Đà Nẵng","postalCode":"500000"}', '{"variant":"Standard","odometer_km":12000,"color":"Black","purchase_date":"2024-02-20"}', '{"start_date":"2024-02-20","end_date":"2030-02-20","km_limit":120000,"policies":[{"component":"battery","months":72,"km":120000}],"certificates":[{"number":"WC-BYD-001","status":"active"}]}')
 ON CONFLICT (vin) DO NOTHING;
 
 -- 7. PARTS CATALOG
@@ -341,3 +341,4 @@ ON CONFLICT DO NOTHING;
 
 COMMENT ON TABLE aoem.warranty_policies IS 'Chính sách bảo hành của các OEM';
 COMMENT ON TABLE aoem.vehicle_warranties IS 'Áp dụng chính sách bảo hành cho từng xe cụ thể';
+COMMENT ON TABLE aoem.vehicles IS 'Bảng xe - lưu trữ thông tin khách hàng trực tiếp trong customer_info JSON field thay vì mapping với bảng users';
