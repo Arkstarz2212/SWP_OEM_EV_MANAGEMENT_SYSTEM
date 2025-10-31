@@ -14,6 +14,7 @@ public class VehicleDetailResponse {
     private LocalDate warrantyStartDate;
     private LocalDate warrantyEndDate;
     private String warrantyStatus;
+    private String status; // Vehicle status for soft delete
     private CustomerBasicInfo customer;
     private List<ComponentInfo> components;
     private List<ServiceHistoryInfo> serviceHistory;
@@ -90,6 +91,14 @@ public class VehicleDetailResponse {
 
     public void setWarrantyStatus(String warrantyStatus) {
         this.warrantyStatus = warrantyStatus;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public CustomerBasicInfo getCustomer() {

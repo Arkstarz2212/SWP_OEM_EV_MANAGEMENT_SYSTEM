@@ -18,6 +18,14 @@ public interface IVehicleService {
 
     boolean deactivateVehicle(String vin, String reason);
 
+    boolean softDeleteVehicle(String vin);
+
+    boolean restoreVehicle(String vin);
+
+    List<VehicleResponse> getDeletedVehicles();
+
+    List<VehicleResponse> getVehiclesByStatus(String status, Long oemId);
+
     // Vehicle Lookup and Search
     VehicleDetailResponse getVehicleByVin(String vin);
 
@@ -80,6 +88,4 @@ public interface IVehicleService {
     boolean markVehicleAsRecalled(String vin, String recallDetails);
 
     boolean markVehicleAsRepaired(String vin, Long claimId);
-
-    List<VehicleResponse> getVehiclesByStatus(String status, Long oemId);
 }

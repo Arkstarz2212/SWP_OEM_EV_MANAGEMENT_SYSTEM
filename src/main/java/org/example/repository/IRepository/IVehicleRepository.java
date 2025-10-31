@@ -84,4 +84,11 @@ public interface IVehicleRepository {
     Long countActiveWarranties();
 
     Long countExpiredWarranties();
+
+    // Soft delete methods
+    List<Vehicle> findDeletedVehicles();
+
+    void restoreById(Long id);
+
+    List<Vehicle> findByStatus(String status);
 }

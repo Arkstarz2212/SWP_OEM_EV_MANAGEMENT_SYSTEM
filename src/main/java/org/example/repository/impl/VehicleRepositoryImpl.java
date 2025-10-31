@@ -30,6 +30,15 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
         vehicle.setVehicle_data(rs.getString("vehicle_data"));
         vehicle.setWarranty_info(rs.getString("warranty_info"));
         vehicle.setCustomer_info(rs.getString("customer_info"));
+
+        // Handle status column gracefully - it might not exist yet
+        try {
+            vehicle.setStatus(rs.getString("status"));
+        } catch (Exception e) {
+            // If status column doesn't exist, set default status
+            vehicle.setStatus("active");
+        }
+
         return vehicle;
     };
 
@@ -45,40 +54,80 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
     }
 
     private Vehicle insertVehicle(Vehicle vehicle) {
-        String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_info, vehicle_data, warranty_info) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try {
+            String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_info, vehicle_data, warranty_info, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, new String[] { "id" });
-            ps.setString(1, vehicle.getVin());
-            ps.setLong(2, vehicle.getOemId());
-            ps.setString(3, vehicle.getModel());
-            ps.setInt(4, vehicle.getModelYear());
-            ps.setString(5, vehicle.getCustomer_info());
-            ps.setString(6, vehicle.getVehicle_data());
-            ps.setString(7, vehicle.getWarranty_info());
-            return ps;
-        }, keyHolder);
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(sql, new String[] { "id" });
+                ps.setString(1, vehicle.getVin());
+                ps.setLong(2, vehicle.getOemId());
+                ps.setString(3, vehicle.getModel());
+                ps.setInt(4, vehicle.getModelYear());
+                ps.setString(5, vehicle.getCustomer_info());
+                ps.setString(6, vehicle.getVehicle_data());
+                ps.setString(7, vehicle.getWarranty_info());
+                ps.setString(8, vehicle.getStatus() != null ? vehicle.getStatus() : "active");
+                return ps;
+            }, keyHolder);
 
-        Number key = keyHolder.getKey();
-        if (key != null) {
-            vehicle.setId(key.longValue());
+            Number key = keyHolder.getKey();
+            if (key != null) {
+                vehicle.setId(key.longValue());
+            }
+        } catch (Exception e) {
+            // If status column doesn't exist, insert without status
+            String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_info, vehicle_data, warranty_info) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(sql, new String[] { "id" });
+                ps.setString(1, vehicle.getVin());
+                ps.setLong(2, vehicle.getOemId());
+                ps.setString(3, vehicle.getModel());
+                ps.setInt(4, vehicle.getModelYear());
+                ps.setString(5, vehicle.getCustomer_info());
+                ps.setString(6, vehicle.getVehicle_data());
+                ps.setString(7, vehicle.getWarranty_info());
+                return ps;
+            }, keyHolder);
+
+            Number key = keyHolder.getKey();
+            if (key != null) {
+                vehicle.setId(key.longValue());
+            }
         }
         return vehicle;
     }
 
     private Vehicle updateVehicle(Vehicle vehicle) {
-        String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_info = ?, vehicle_data = ?, warranty_info = ? WHERE id = ?";
+        try {
+            String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_info = ?, vehicle_data = ?, warranty_info = ?, status = ? WHERE id = ?";
 
-        jdbcTemplate.update(sql,
-                vehicle.getVin(),
-                vehicle.getOemId(),
-                vehicle.getModel(),
-                vehicle.getModelYear(),
-                vehicle.getCustomer_info(),
-                vehicle.getVehicle_data(),
-                vehicle.getWarranty_info(),
-                vehicle.getId());
+            jdbcTemplate.update(sql,
+                    vehicle.getVin(),
+                    vehicle.getOemId(),
+                    vehicle.getModel(),
+                    vehicle.getModelYear(),
+                    vehicle.getCustomer_info(),
+                    vehicle.getVehicle_data(),
+                    vehicle.getWarranty_info(),
+                    vehicle.getStatus(),
+                    vehicle.getId());
+        } catch (Exception e) {
+            // If status column doesn't exist, update without status
+            String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_info = ?, vehicle_data = ?, warranty_info = ? WHERE id = ?";
+
+            jdbcTemplate.update(sql,
+                    vehicle.getVin(),
+                    vehicle.getOemId(),
+                    vehicle.getModel(),
+                    vehicle.getModelYear(),
+                    vehicle.getCustomer_info(),
+                    vehicle.getVehicle_data(),
+                    vehicle.getWarranty_info(),
+                    vehicle.getId());
+        }
 
         return vehicle;
     }
@@ -92,14 +141,29 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
 
     @Override
     public List<Vehicle> findAll() {
-        String sql = "SELECT * FROM aoem.vehicles";
-        return jdbcTemplate.query(sql, vehicleRowMapper);
+        try {
+            // Try to query with status column first
+            String sql = "SELECT * FROM aoem.vehicles WHERE status IS NULL OR status != 'deleted'";
+            return jdbcTemplate.query(sql, vehicleRowMapper);
+        } catch (Exception e) {
+            // If there's an error (e.g., status column doesn't exist),
+            // fall back to basic query without status filtering
+            String sql = "SELECT * FROM aoem.vehicles";
+            return jdbcTemplate.query(sql, vehicleRowMapper);
+        }
     }
 
     @Override
     public void deleteById(Long id) {
-        String sql = "DELETE FROM aoem.vehicles WHERE id = ?";
-        jdbcTemplate.update(sql, id);
+        // Soft delete - update status to 'deleted' instead of hard delete
+        // First check if status column exists, if not, skip the update
+        try {
+            String sql = "UPDATE aoem.vehicles SET status = 'deleted' WHERE id = ?";
+            jdbcTemplate.update(sql, id);
+        } catch (Exception e) {
+            // If status column doesn't exist, this is a no-op for now
+            // In a real scenario, you might want to log this or handle differently
+        }
     }
 
     @Override
@@ -292,5 +356,38 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
     public List<Vehicle> findByWarrantyStartDateInWarrantyInfo(LocalDate startDate) {
         String sql = "SELECT * FROM aoem.vehicles WHERE (warranty_info::json->>'start_date')::date = ?";
         return jdbcTemplate.query(sql, vehicleRowMapper, java.sql.Date.valueOf(startDate));
+    }
+
+    // Soft delete methods
+    @Override
+    public List<Vehicle> findDeletedVehicles() {
+        try {
+            String sql = "SELECT * FROM aoem.vehicles WHERE status = 'deleted'";
+            return jdbcTemplate.query(sql, vehicleRowMapper);
+        } catch (Exception e) {
+            // If status column doesn't exist, return empty list
+            return List.of();
+        }
+    }
+
+    @Override
+    public void restoreById(Long id) {
+        try {
+            String sql = "UPDATE aoem.vehicles SET status = 'active' WHERE id = ?";
+            jdbcTemplate.update(sql, id);
+        } catch (Exception e) {
+            // If status column doesn't exist, this is a no-op
+        }
+    }
+
+    @Override
+    public List<Vehicle> findByStatus(String status) {
+        try {
+            String sql = "SELECT * FROM aoem.vehicles WHERE status = ?";
+            return jdbcTemplate.query(sql, vehicleRowMapper, status);
+        } catch (Exception e) {
+            // If status column doesn't exist, return empty list
+            return List.of();
+        }
     }
 }

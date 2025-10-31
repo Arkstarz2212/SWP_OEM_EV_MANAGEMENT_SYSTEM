@@ -45,6 +45,7 @@ public class VehicleService implements IVehicleService {
         vehicle.setOemId(request.getOemId());
         vehicle.setModel(request.getModel());
         vehicle.setModelYear(request.getModelYear());
+        vehicle.setStatus("active"); // Set default status
         vehicle.setCreatedAt(OffsetDateTime.now());
 
         // Set customer info directly from request
@@ -200,11 +201,51 @@ public class VehicleService implements IVehicleService {
             return false;
         }
 
-        // In this simple implementation, we don't have a deactivated flag
-        // In a real system, you might add a status field or soft delete
-        // For now, we'll just return true
+        Vehicle vehicle = vehicleOpt.get();
+        vehicle.setStatus("inactive");
+        vehicleRepository.save(vehicle);
         return true;
     }
+
+    @Override
+    public boolean softDeleteVehicle(String vin) {
+        Optional<Vehicle> vehicleOpt = vehicleRepository.findByVin(vin);
+        if (vehicleOpt.isEmpty()) {
+            return false;
+        }
+
+        Vehicle vehicle = vehicleOpt.get();
+        vehicle.setStatus("deleted");
+        vehicleRepository.save(vehicle);
+        return true;
+    }
+
+    @Override
+    public boolean restoreVehicle(String vin) {
+        // First check if vehicle exists (including deleted ones)
+        List<Vehicle> vehicles = vehicleRepository.findByVinIn(List.of(vin));
+        if (vehicles.isEmpty()) {
+            return false;
+        }
+
+        Vehicle vehicle = vehicles.get(0);
+        if (!"deleted".equals(vehicle.getStatus())) {
+            return false; // Vehicle is not deleted
+        }
+
+        vehicle.setStatus("active");
+        vehicleRepository.save(vehicle);
+        return true;
+    }
+
+    @Override
+    public List<VehicleResponse> getDeletedVehicles() {
+        List<Vehicle> deletedVehicles = vehicleRepository.findDeletedVehicles();
+        return deletedVehicles.stream()
+                .map(this::convertToVehicleResponse)
+                .toList();
+    }
+
 
     @Override
     public VehicleDetailResponse getVehicleByVin(String vin) {
@@ -472,8 +513,11 @@ public class VehicleService implements IVehicleService {
 
     @Override
     public List<VehicleResponse> getVehiclesByStatus(String status, Long oemId) {
-        // TODO: Implement status-based filtering
-        return new ArrayList<>();
+        List<Vehicle> vehicles = vehicleRepository.findByStatus(status);
+        return vehicles.stream()
+                .filter(vehicle -> oemId == null || oemId.equals(vehicle.getOemId()))
+                .map(this::convertToVehicleResponse)
+                .toList();
     }
 
     // Helper methods
@@ -508,6 +552,9 @@ public class VehicleService implements IVehicleService {
             response.setWarrantyKmLimit(warrantyInfo.getKmLimit());
         }
 
+        // Set status
+        response.setStatus(vehicle.getStatus());
+
         return response;
     }
 
@@ -532,6 +579,9 @@ public class VehicleService implements IVehicleService {
             response.setWarrantyEndDate(warrantyInfo.getEndDate());
             response.setWarrantyStatus(checkWarrantyStatus(vehicle.getVin()) ? "Active" : "Expired");
         }
+
+        // Set vehicle status
+        response.setStatus(vehicle.getStatus());
 
         // Set customer info from direct customer info
         CustomerInfo customerInfo = vehicle.getCustomerInfo();

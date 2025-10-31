@@ -24,6 +24,9 @@ public class VehicleResponse {
     private LocalDate warrantyEndDate;
     private Integer warrantyKmLimit;
 
+    // Status for soft delete
+    private String status;
+
     public Long getId() {
         return id;
     }
@@ -126,5 +129,13 @@ public class VehicleResponse {
 
     public void setWarrantyKmLimit(Integer warrantyKmLimit) {
         this.warrantyKmLimit = warrantyKmLimit;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

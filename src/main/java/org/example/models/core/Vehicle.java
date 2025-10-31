@@ -17,6 +17,7 @@ public class Vehicle {
     private String customer_info; // aoem.vehicles.customer_info (JSON text) - direct customer info storage
     private String vehicle_data; // aoem.vehicles.vehicle_data (JSON text)
     private String warranty_info;// aoem.vehicles.warranty_info (JSON text)
+    private String status; // aoem.vehicles.status - for soft delete functionality
 
     // Backward-compatible transient helpers
     private transient VehicleData vehicleDataCache;
@@ -35,6 +36,7 @@ public class Vehicle {
         this.modelYear = modelYear;
         this.vehicle_data = vehicle_data;
         this.warranty_info = warranty_info;
+        this.status = "active"; // Default status for new vehicles
     }
 
     public Long getId() {
@@ -100,6 +102,14 @@ public class Vehicle {
 
     public void setWarranty_info(String warranty_info) {
         this.warranty_info = warranty_info;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     // Backward-compatible helpers used across services
