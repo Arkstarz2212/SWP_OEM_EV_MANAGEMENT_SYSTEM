@@ -37,7 +37,7 @@ public class WarrantyPoliciesController {
     private IWarrantyPolicyService warrantyPolicyService;
 
     @PostMapping
-    @Operation(summary = "Create New Warranty Policy", description = "Create a new warranty policy for a specific OEM manufacturer with coverage details and effective dates. Roles: EVM_Staff.")
+    @Operation(summary = "Create New Warranty Policy", description = "Create a new warranty policy for a specific OEM manufacturer with coverage details and effective dates. Roles: Admin, EVM_Staff.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Warranty policy created successfully", content = @Content(schema = @Schema(implementation = WarrantyPolicyResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),

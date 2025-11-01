@@ -357,10 +357,7 @@ public class WarrantyPolicyService implements IWarrantyPolicyService {
     @Override
     public boolean validatePolicyCode(String policyCode, Long excludePolicyId) {
         Optional<WarrantyPolicy> existingPolicy = warrantyPolicyRepository.findByPolicyCode(policyCode);
-        if (existingPolicy.isPresent() && !existingPolicy.get().getId().equals(excludePolicyId)) {
-            return false; // Code already exists
-        }
-        return true; // Code is available
+        return existingPolicy.isEmpty() || existingPolicy.get().getId().equals(excludePolicyId);
     }
 
     @Override
@@ -381,12 +378,8 @@ public class WarrantyPolicyService implements IWarrantyPolicyService {
         WarrantyPolicy policy = policyOpt.get();
 
         // Cannot delete if it's the default policy
-        if (Boolean.TRUE.equals(policy.getIsDefault())) {
-            return false;
-        }
-
         // Add more business rules here (e.g., check if referenced by active claims)
-        return true;
+        return !Boolean.TRUE.equals(policy.getIsDefault());
     }
 
     @Override
@@ -426,10 +419,10 @@ public class WarrantyPolicyService implements IWarrantyPolicyService {
 
         WarrantyPolicy mostGenerous = policies.stream()
                 .max((p1, p2) -> {
-                    int months1 = p1.getWarrantyMonths() != null ? p1.getWarrantyMonths() : 0;
-                    int months2 = p2.getWarrantyMonths() != null ? p2.getWarrantyMonths() : 0;
-                    int km1 = p1.getWarrantyKm() != null ? p1.getWarrantyKm() : 0;
-                    int km2 = p2.getWarrantyKm() != null ? p2.getWarrantyKm() : 0;
+                    int months1 = Optional.ofNullable(p1.getWarrantyPeriodMonths()).orElse(0);
+                    int months2 = Optional.ofNullable(p2.getWarrantyPeriodMonths()).orElse(0);
+                    int km1 = Optional.ofNullable(p1.getWarrantyKmLimit()).orElse(0);
+                    int km2 = Optional.ofNullable(p2.getWarrantyKmLimit()).orElse(0);
 
                     // Compare by months first, then by km
                     int monthsCompare = Integer.compare(months1, months2);
@@ -449,10 +442,10 @@ public class WarrantyPolicyService implements IWarrantyPolicyService {
 
         WarrantyPolicy mostRestrictive = policies.stream()
                 .min((p1, p2) -> {
-                    int months1 = p1.getWarrantyMonths() != null ? p1.getWarrantyMonths() : Integer.MAX_VALUE;
-                    int months2 = p2.getWarrantyMonths() != null ? p2.getWarrantyMonths() : Integer.MAX_VALUE;
-                    int km1 = p1.getWarrantyKm() != null ? p1.getWarrantyKm() : Integer.MAX_VALUE;
-                    int km2 = p2.getWarrantyKm() != null ? p2.getWarrantyKm() : Integer.MAX_VALUE;
+                    int months1 = Optional.ofNullable(p1.getWarrantyPeriodMonths()).orElse(Integer.MAX_VALUE);
+                    int months2 = Optional.ofNullable(p2.getWarrantyPeriodMonths()).orElse(Integer.MAX_VALUE);
+                    int km1 = Optional.ofNullable(p1.getWarrantyKmLimit()).orElse(Integer.MAX_VALUE);
+                    int km2 = Optional.ofNullable(p2.getWarrantyKmLimit()).orElse(Integer.MAX_VALUE);
 
                     // Compare by months first, then by km
                     int monthsCompare = Integer.compare(months1, months2);

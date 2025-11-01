@@ -1,21 +1,30 @@
 package org.example.models.dto.request;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public class OemManufacturerCreateRequest {
-    @NotBlank(message = "Code không được để trống")
+    @NotBlank(message = "Code is required")
+    @Size(max = 10, message = "Code must not exceed 10 characters")
     private String code;
 
-    @NotBlank(message = "Tên không được để trống")
+    @NotBlank(message = "Name is required")
+    @Size(max = 200, message = "Name must not exceed 200 characters")
     private String name;
 
-    // Contact info fields
-    @Email(message = "Email không hợp lệ")
-    private String email;
-    private String phone;
-    private String address;
+    private String contact; // JSON string for contact information
 
+    // Constructors
+    public OemManufacturerCreateRequest() {
+    }
+
+    public OemManufacturerCreateRequest(String code, String name, String contact) {
+        this.code = code;
+        this.name = name;
+        this.contact = contact;
+    }
+
+    // Getters and Setters
     public String getCode() {
         return code;
     }
@@ -32,27 +41,20 @@ public class OemManufacturerCreateRequest {
         this.name = name;
     }
 
-    public String getEmail() {
-        return email;
+    public String getContact() {
+        return contact;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setContact(String contact) {
+        this.contact = contact;
     }
 
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
+    @Override
+    public String toString() {
+        return "OemManufacturerCreateRequest{" +
+                "code='" + code + '\'' +
+                ", name='" + name + '\'' +
+                ", contact='" + contact + '\'' +
+                '}';
     }
 }
