@@ -167,7 +167,13 @@ public class SecurityConfig {
                                                 .hasAnyRole("Admin", "SC_Staff", "SC_Technician", "EVM_Staff")
                                                 .requestMatchers(org.springframework.http.HttpMethod.POST,
                                                                 "/api/parts/**")
-                                                .hasRole("EVM_Staff")
+                                                .hasAnyRole("Admin", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.PUT,
+                                                                "/api/parts/**")
+                                                .hasAnyRole("Admin", "EVM_Staff")
+                                                .requestMatchers(org.springframework.http.HttpMethod.DELETE,
+                                                                "/api/parts/**")
+                                                .hasAnyRole("Admin", "EVM_Staff")
                                                 // Reports
                                                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                                                                 "/api/reports/performance/**")

@@ -62,7 +62,7 @@ public class PartsController {
     private IAuthenticationService authenticationService;
 
     @PostMapping
-    @Operation(summary = "Create New Part", description = "Create a new part in the catalog with part number, name, category, description, unit cost, and manufacturer information. Roles: EVM_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Part creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Part Example", value = "{\"partNumber\": \"BAT001\", \"name\": \"Battery Pack\", \"category\": \"BATTERY\", \"description\": \"High capacity battery pack\", \"unitCost\": 1500.00, \"oemId\": 1, \"manufacturer\": \"Tesla\"}"))))
+    @Operation(summary = "Create New Part", description = "Create a new part in the catalog with part number, name, category, description, unit cost, and manufacturer information. Roles: EVM_Staff.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Part creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Part Example", value = "{\"partNumber\": \"BAT001\", \"name\": \"Battery Pack\", \"category\": \"battery\", \"description\": \"High capacity battery pack\", \"unitCost\": 1500.00, \"oemId\": 1, \"manufacturer\": \"Tesla\"}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Part created successfully", content = @Content(schema = @Schema(implementation = PartCatalogResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data")
@@ -124,7 +124,7 @@ public class PartsController {
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
+            if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
@@ -157,7 +157,7 @@ public class PartsController {
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
+            if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
@@ -172,7 +172,7 @@ public class PartsController {
     @GetMapping
     @Operation(summary = "Search Parts", description = "Search and filter parts by keyword, category, or manufacturer with pagination support. Roles: Admin, SC_Staff, SC_Technician, EVM_Staff.", parameters = {
             @Parameter(name = "keyword", description = "Search keyword for part name or description", required = false, example = "battery"),
-            @Parameter(name = "category", description = "Filter by part category", required = false, example = "BATTERY"),
+            @Parameter(name = "category", description = "Filter by part category", required = false, example = "battery"),
             @Parameter(name = "manufacturer", description = "Filter by manufacturer", required = false, example = "Tesla"),
             @Parameter(name = "limit", description = "Maximum number of parts to return", required = false, example = "20", schema = @Schema(defaultValue = "20")),
             @Parameter(name = "offset", description = "Number of parts to skip for pagination", required = false, example = "0", schema = @Schema(defaultValue = "0"))
@@ -198,7 +198,7 @@ public class PartsController {
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
+            if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
@@ -301,7 +301,7 @@ public class PartsController {
             }
             String token = authHeader.substring("Bearer ".length()).trim();
             java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
-            if (session == null || !(session.get("role") instanceof UserRole)) {
+            if (session == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
             }
@@ -323,6 +323,30 @@ public class PartsController {
     })
     public ResponseEntity<?> deletePart(@PathVariable("id") Long id) {
         try {
+            // RBAC: Admin, EVM_Staff can delete parts
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
+                    .currentRequestAttributes();
+            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
+            }
+            String token = authHeader.substring("Bearer ".length()).trim();
+            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
+            if (session == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
+            }
+            Object roleObj = session.get("role");
+            UserRole currentRole = convertToUserRole(roleObj);
+            if (currentRole == null || (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiErrorResponse.forbidden("Only Admin or EVM_Staff can delete parts",
+                                request.getRequestURI()));
+            }
+
             if (id == null || id <= 0) {
                 return ResponseEntity.badRequest()
                         .body(ApiErrorResponse.badRequest("Invalid part ID", ""));
@@ -351,6 +375,30 @@ public class PartsController {
     })
     public ResponseEntity<?> updatePartStatus(@PathVariable("id") Long id, @RequestParam("active") boolean active) {
         try {
+            // RBAC: Admin, EVM_Staff can update part status
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
+                    .currentRequestAttributes();
+            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
+            }
+            String token = authHeader.substring("Bearer ".length()).trim();
+            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
+            if (session == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
+            }
+            Object roleObj = session.get("role");
+            UserRole currentRole = convertToUserRole(roleObj);
+            if (currentRole == null || (currentRole != UserRole.Admin && currentRole != UserRole.EVM_Staff)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiErrorResponse.forbidden("Only Admin or EVM_Staff can update part status",
+                                request.getRequestURI()));
+            }
+
             if (id == null || id <= 0) {
                 return ResponseEntity.badRequest()
                         .body(ApiErrorResponse.badRequest("Invalid part ID", ""));
@@ -380,6 +428,23 @@ public class PartsController {
     public ResponseEntity<?> getAllParts(@RequestParam(value = "limit", defaultValue = "20") String limit,
             @RequestParam(value = "offset", defaultValue = "0") String offset) {
         try {
+            // RBAC: any authenticated role
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
+                    .currentRequestAttributes();
+            jakarta.servlet.http.HttpServletRequest request = attributes.getRequest();
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiErrorResponse.unauthorized("Missing or invalid Authorization header",
+                                request.getRequestURI()));
+            }
+            String token = authHeader.substring("Bearer ".length()).trim();
+            java.util.Map<String, Object> session = authenticationService.getSessionByToken(token);
+            if (session == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiErrorResponse.unauthorized("Invalid or expired session", request.getRequestURI()));
+            }
+
             List<PartCatalogResponse> parts = partCatalogService.getAllParts(Integer.parseInt(limit),
                     Integer.parseInt(offset));
             return ResponseEntity.ok(parts);
