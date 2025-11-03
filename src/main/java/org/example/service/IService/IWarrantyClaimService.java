@@ -73,6 +73,8 @@ public interface IWarrantyClaimService {
         // Status Tracking
         List<WarrantyClaimResponse> getClaimsByStatus(ClaimStatus status, Long organizationId);
 
+        List<WarrantyClaimResponse> getClaimsByStatusSortedNewest(ClaimStatus status);
+
         boolean updateClaimStatus(Long claimId, ClaimStatus newStatus, String statusNotes, Long updatedById);
 
         boolean deleteClaim(Long claimId);

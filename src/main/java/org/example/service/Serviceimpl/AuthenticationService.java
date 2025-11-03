@@ -15,7 +15,7 @@ import org.example.models.enums.UserRole;
 import org.example.repository.IRepository.IUserRepository;
 import org.example.service.IService.IAuthenticationService;
 import org.example.service.IService.IJwtService;
-import org.example.ulti.SecurityUtil;
+import org.example.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;

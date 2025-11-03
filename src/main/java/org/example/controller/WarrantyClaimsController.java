@@ -389,6 +389,35 @@ public class WarrantyClaimsController {
         }
     }
 
+    @GetMapping("/sorted")
+    @Operation(summary = "List Claims by Status (Newest First)", description = "Get claims filtered by status and sorted by creation time descending.", parameters = {
+            @Parameter(name = "status", description = "Claim status", required = true, example = "submitted", schema = @Schema(allowableValues = {
+                    "draft", "submitted", "approved", "rejected", "completed" }))
+    })
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Claims retrieved successfully", content = @Content(schema = @Schema(implementation = WarrantyClaimResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid status"),
+            @ApiResponse(responseCode = "404", description = "No claims found")
+    })
+    public ResponseEntity<?> listClaimsSorted(@RequestParam("status") String status) {
+        try {
+            if (status == null || status.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "status is required"));
+            }
+            ClaimStatus claimStatus;
+            try {
+                claimStatus = ClaimStatus.valueOf(status.toLowerCase());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body(Map.of("error",
+                        "Invalid status. Valid statuses: " + java.util.Arrays.toString(ClaimStatus.values())));
+            }
+            List<WarrantyClaimResponse> claims = warrantyClaimService.getClaimsByStatusSortedNewest(claimStatus);
+            return ResponseEntity.ok(claims);
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/assign")
     @Operation(summary = "Assign Technician to Claim", description = "Assign a technician to handle a specific warranty claim. Roles: Admin, SC_Staff.", parameters = {
             @Parameter(name = "id", description = "Claim ID to assign technician to", required = true, example = "1")

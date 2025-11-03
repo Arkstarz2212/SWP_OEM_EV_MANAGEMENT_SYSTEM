@@ -1,4 +1,4 @@
-package org.example.ulti;
+package org.example.util;
 
 public final class PaginationUtil {
     private PaginationUtil() {

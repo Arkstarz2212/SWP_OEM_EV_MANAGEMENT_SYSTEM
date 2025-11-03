@@ -27,6 +27,8 @@ public interface IWarrantyClaimRepository {
     // Status related methods
     List<WarrantyClaim> findByStatus(ClaimStatus status);
 
+    List<WarrantyClaim> findByStatusOrderByCreatedAtDesc(ClaimStatus status);
+
     List<WarrantyClaim> findByStatusIn(List<ClaimStatus> statuses);
 
     Long countByStatus(ClaimStatus status);

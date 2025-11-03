@@ -373,6 +373,11 @@ public class WarrantyClaimService implements IWarrantyClaimService {
     }
 
     @Override
+    public List<WarrantyClaimResponse> getClaimsByStatusSortedNewest(ClaimStatus status) {
+        return claimRepository.findByStatusOrderByCreatedAtDesc(status).stream().map(this::toResponse).toList();
+    }
+
+    @Override
     public boolean updateClaimStatus(Long claimId, ClaimStatus newStatus, String statusNotes, Long updatedById) {
         Optional<WarrantyClaim> claimOpt = claimRepository.findById(claimId);
         if (claimOpt.isEmpty())

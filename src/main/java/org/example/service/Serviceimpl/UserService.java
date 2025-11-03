@@ -17,7 +17,7 @@ import org.example.models.json.ProfileData;
 import org.example.repository.IRepository.IUserRepository;
 import org.example.service.IService.IRoleService;
 import org.example.service.IService.IUserService;
-import org.example.ulti.SecurityUtil;
+import org.example.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

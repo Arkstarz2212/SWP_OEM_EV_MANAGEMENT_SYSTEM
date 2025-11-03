@@ -202,6 +202,12 @@ public class WarrantyClaimRepositoryImpl implements IWarrantyClaimRepository {
     }
 
     @Override
+    public List<WarrantyClaim> findByStatusOrderByCreatedAtDesc(ClaimStatus status) {
+        String sql = "SELECT * FROM aoem.warranty_claims WHERE status = ? ORDER BY created_at DESC";
+        return jdbcTemplate.query(sql, claimRowMapper, status.name());
+    }
+
+    @Override
     public List<WarrantyClaim> findByStatusIn(List<ClaimStatus> statuses) {
         if (statuses == null || statuses.isEmpty()) {
             return List.of();
