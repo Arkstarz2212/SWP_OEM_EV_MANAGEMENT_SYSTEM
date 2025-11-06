@@ -18,6 +18,7 @@ public class Vehicle {
     private String vehicle_data; // aoem.vehicles.vehicle_data (JSON text)
     private String warranty_info;// aoem.vehicles.warranty_info (JSON text)
     private String status; // aoem.vehicles.status - for soft delete functionality
+    private String image; // aoem.vehicles.image (đường dẫn hình ảnh)
 
     // Backward-compatible transient helpers
     private transient VehicleData vehicleDataCache;
@@ -110,6 +111,14 @@ public class Vehicle {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 
     // Backward-compatible helpers used across services

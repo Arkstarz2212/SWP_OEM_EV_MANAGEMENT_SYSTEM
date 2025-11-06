@@ -27,6 +27,10 @@ public class PartCatalogService implements IPartCatalogService {
         part.setName(request.getName());
         part.setCategory(request.getCategory() != null ? request.getCategory().name() : null);
 
+        if (request.getImage() != null) {
+            part.setImage(request.getImage());
+        }
+
         PartData data = new PartData();
         data.setDescription(request.getDescription());
         data.setVehicleModels(request.getVehicleModels());
@@ -177,6 +181,7 @@ public class PartCatalogService implements IPartCatalogService {
         res.setName(part.getName());
         res.setCategory(
                 part.getCategory() != null ? org.example.models.enums.PartCategory.valueOf(part.getCategory()) : null);
+        res.setImage(part.getImage());
         PartData pd = deserializePartData(part.getPart_data());
         if (pd != null) {
             res.setDescription(pd.getDescription());

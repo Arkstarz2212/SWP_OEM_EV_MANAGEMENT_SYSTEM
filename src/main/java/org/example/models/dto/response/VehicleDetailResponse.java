@@ -15,6 +15,7 @@ public class VehicleDetailResponse {
     private LocalDate warrantyEndDate;
     private String warrantyStatus;
     private String status; // Vehicle status for soft delete
+    private String image; // Đường dẫn ảnh xe (vehicle image path)
     private CustomerBasicInfo customer;
     private List<ComponentInfo> components;
     private List<ServiceHistoryInfo> serviceHistory;
@@ -99,6 +100,14 @@ public class VehicleDetailResponse {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 
     public CustomerBasicInfo getCustomer() {

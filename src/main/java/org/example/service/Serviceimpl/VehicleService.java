@@ -77,6 +77,10 @@ public class VehicleService implements IVehicleService {
         warrantyInfo.setKmLimit(request.getKmLimit());
         vehicle.setWarrantyInfo(warrantyInfo);
 
+        if (request.getImage() != null) {
+            vehicle.setImage(request.getImage());
+        }
+
         // Save vehicle
         Vehicle savedVehicle = vehicleRepository.save(vehicle);
 
@@ -189,6 +193,10 @@ public class VehicleService implements IVehicleService {
 
         vehicle.setWarrantyInfo(warrantyInfo);
 
+        if (request.getImage() != null) {
+            vehicle.setImage(request.getImage());
+        }
+
         // Save updated vehicle
         Vehicle savedVehicle = vehicleRepository.save(vehicle);
         return convertToVehicleDetailResponse(savedVehicle);
@@ -245,7 +253,6 @@ public class VehicleService implements IVehicleService {
                 .map(this::convertToVehicleResponse)
                 .toList();
     }
-
 
     @Override
     public VehicleDetailResponse getVehicleByVin(String vin) {
@@ -564,6 +571,7 @@ public class VehicleService implements IVehicleService {
         response.setVin(vehicle.getVin());
         response.setModel(vehicle.getModel());
         response.setModelYear(vehicle.getModelYear());
+        response.setImage(vehicle.getImage());
 
         // Set vehicle data
         VehicleData vehicleData = vehicle.getVehicleData();

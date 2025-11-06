@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS aoem.parts_catalog (
     part_number VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(200) NOT NULL,
     category VARCHAR(50) NOT NULL,
+    image TEXT NULL,
     part_data TEXT NULL  -- JSON
 );
 
@@ -88,6 +89,7 @@ CREATE TABLE IF NOT EXISTS aoem.vehicles (
     customer_info TEXT NULL, -- JSON field containing customer basic information (fullName, phoneNumber, email, address, city, province, postalCode)
     vehicle_data TEXT NULL, -- JSON
     warranty_info TEXT NULL, -- JSON
+    image TEXT NULL,
     status VARCHAR(20) DEFAULT 'active' -- Vehicle status: active, inactive, deleted. Used for soft delete functionality.
 );
 

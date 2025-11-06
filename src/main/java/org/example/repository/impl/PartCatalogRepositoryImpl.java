@@ -28,13 +28,17 @@ public class PartCatalogRepositoryImpl implements IPartCatalogRepository {
         p.setName(rs.getString("name"));
         p.setCategory(rs.getString("category"));
         p.setPart_data(rs.getString("part_data"));
+        try {
+            p.setImage(rs.getString("image"));
+        } catch (Exception ignored) {
+        }
         return p;
     };
 
     @Override
     public PartCatalog save(PartCatalog partCatalog) {
         if (partCatalog.getId() == null) {
-            String sql = "INSERT INTO aoem.parts_catalog (oem_id, part_number, name, category, part_data) VALUES (?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO aoem.parts_catalog (oem_id, part_number, name, category, image, part_data) VALUES (?, ?, ?, ?, ?, ?)";
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(conn -> {
                 var ps = conn.prepareStatement(sql, new String[] { "id" });
@@ -42,7 +46,8 @@ public class PartCatalogRepositoryImpl implements IPartCatalogRepository {
                 ps.setString(2, partCatalog.getPartNumber());
                 ps.setString(3, partCatalog.getName());
                 ps.setString(4, partCatalog.getCategory());
-                ps.setString(5, partCatalog.getPart_data());
+                ps.setString(5, partCatalog.getImage());
+                ps.setString(6, partCatalog.getPart_data());
                 return ps;
             }, keyHolder);
             if (keyHolder.getKey() != null) {
@@ -50,12 +55,13 @@ public class PartCatalogRepositoryImpl implements IPartCatalogRepository {
             }
             return partCatalog;
         } else {
-            String sql = "UPDATE aoem.parts_catalog SET oem_id=?, part_number=?, name=?, category=?, part_data=? WHERE id=?";
+            String sql = "UPDATE aoem.parts_catalog SET oem_id=?, part_number=?, name=?, category=?, image=?, part_data=? WHERE id=?";
             jdbcTemplate.update(sql,
                     partCatalog.getOemId(),
                     partCatalog.getPartNumber(),
                     partCatalog.getName(),
                     partCatalog.getCategory(),
+                    partCatalog.getImage(),
                     partCatalog.getPart_data(),
                     partCatalog.getId());
             return partCatalog;

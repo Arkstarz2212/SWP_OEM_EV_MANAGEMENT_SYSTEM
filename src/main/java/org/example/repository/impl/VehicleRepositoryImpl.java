@@ -38,6 +38,11 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
             // If status column doesn't exist, set default status
             vehicle.setStatus("active");
         }
+        // Handle image column gracefully
+        try {
+            vehicle.setImage(rs.getString("image"));
+        } catch (Exception ignored) {
+        }
 
         return vehicle;
     };
@@ -55,7 +60,7 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
 
     private Vehicle insertVehicle(Vehicle vehicle) {
         try {
-            String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_info, vehicle_data, warranty_info, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_info, vehicle_data, warranty_info, image, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(connection -> {
@@ -67,7 +72,8 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
                 ps.setString(5, vehicle.getCustomer_info());
                 ps.setString(6, vehicle.getVehicle_data());
                 ps.setString(7, vehicle.getWarranty_info());
-                ps.setString(8, vehicle.getStatus() != null ? vehicle.getStatus() : "active");
+                ps.setString(8, vehicle.getImage());
+                ps.setString(9, vehicle.getStatus() != null ? vehicle.getStatus() : "active");
                 return ps;
             }, keyHolder);
 
@@ -76,7 +82,7 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
                 vehicle.setId(key.longValue());
             }
         } catch (Exception e) {
-            // If status column doesn't exist, insert without status
+            // If image/status column doesn't exist, insert without them
             String sql = "INSERT INTO aoem.vehicles (vin, oem_id, model, model_year, customer_info, vehicle_data, warranty_info) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
             KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -102,7 +108,7 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
 
     private Vehicle updateVehicle(Vehicle vehicle) {
         try {
-            String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_info = ?, vehicle_data = ?, warranty_info = ?, status = ? WHERE id = ?";
+            String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_info = ?, vehicle_data = ?, warranty_info = ?, image = ?, status = ? WHERE id = ?";
 
             jdbcTemplate.update(sql,
                     vehicle.getVin(),
@@ -112,10 +118,11 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
                     vehicle.getCustomer_info(),
                     vehicle.getVehicle_data(),
                     vehicle.getWarranty_info(),
+                    vehicle.getImage(),
                     vehicle.getStatus(),
                     vehicle.getId());
         } catch (Exception e) {
-            // If status column doesn't exist, update without status
+            // If image/status column doesn't exist, update without them
             String sql = "UPDATE aoem.vehicles SET vin = ?, oem_id = ?, model = ?, model_year = ?, customer_info = ?, vehicle_data = ?, warranty_info = ? WHERE id = ?";
 
             jdbcTemplate.update(sql,

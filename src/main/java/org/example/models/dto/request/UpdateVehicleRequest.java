@@ -15,6 +15,7 @@ public class UpdateVehicleRequest {
     // / warranty_info)
     private VehicleDataRequest vehicleData;
     private WarrantyInfoRequest warrantyInfo;
+    private String image; // vehicle image path
 
     public String getModel() {
         return model;
@@ -54,5 +55,13 @@ public class UpdateVehicleRequest {
 
     public void setWarrantyInfo(WarrantyInfoRequest warrantyInfo) {
         this.warrantyInfo = warrantyInfo;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 }

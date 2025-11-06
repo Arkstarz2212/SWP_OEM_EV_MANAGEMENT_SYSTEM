@@ -29,6 +29,8 @@ public class CreateVehicleRequest {
     private VehicleDataRequest vehicleData;
     private WarrantyInfoRequest warrantyInfo;
 
+    private String image; // Đường dẫn ảnh xe (vehicle image path)
+
     // Constructors
     public CreateVehicleRequest() {
     }
@@ -88,5 +90,13 @@ public class CreateVehicleRequest {
 
     public void setWarrantyInfo(WarrantyInfoRequest warrantyInfo) {
         this.warrantyInfo = warrantyInfo;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 }

@@ -7,6 +7,7 @@ public class PartCatalog {
     private String name; // aoem.parts_catalog.name
     private String category; // aoem.parts_catalog.category (VARCHAR)
     private String part_data; // aoem.parts_catalog.part_data (JSON text)
+    private String image; // aoem.parts_catalog.image (đường dẫn hình ảnh)
 
     public PartCatalog() {
     }
@@ -65,5 +66,13 @@ public class PartCatalog {
 
     public void setPart_data(String part_data) {
         this.part_data = part_data;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 }

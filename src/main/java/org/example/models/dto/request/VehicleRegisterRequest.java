@@ -23,6 +23,7 @@ public class VehicleRegisterRequest {
     private LocalDate warrantyStartDate;
     private LocalDate warrantyEndDate;
     private Integer kmLimit;
+    private String image;
 
     public VehicleRegisterRequest() {
     }
@@ -178,5 +179,13 @@ public class VehicleRegisterRequest {
 
     public void setKmLimit(Integer kmLimit) {
         this.kmLimit = kmLimit;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 }
