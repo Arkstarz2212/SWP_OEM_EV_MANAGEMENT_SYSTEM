@@ -1,5 +1,7 @@
 package org.example.models.core;
 
+import java.time.OffsetDateTime;
+
 public class PartCatalog {
     private Long id; // aoem.parts_catalog.id
     private Long oemId; // aoem.parts_catalog.oem_id
@@ -8,6 +10,8 @@ public class PartCatalog {
     private String category; // aoem.parts_catalog.category (VARCHAR)
     private String part_data; // aoem.parts_catalog.part_data (JSON text)
     private String image; // aoem.parts_catalog.image (đường dẫn hình ảnh)
+    private Boolean isActive; // aoem.parts_catalog.is_active
+    private OffsetDateTime createdAt; // aoem.parts_catalog.created_at
 
     public PartCatalog() {
     }
@@ -74,5 +78,21 @@ public class PartCatalog {
 
     public void setImage(String image) {
         this.image = image;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(OffsetDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 }

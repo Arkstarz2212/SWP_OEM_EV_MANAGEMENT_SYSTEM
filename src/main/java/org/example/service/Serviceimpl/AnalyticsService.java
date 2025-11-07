@@ -5,11 +5,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.example.repository.IRepository.IPartCatalogRepository;
+import org.example.repository.IRepository.IVehicleRepository;
 import org.example.service.IService.IAnalyticsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AnalyticsService implements IAnalyticsService {
+
+    @Autowired
+    private IPartCatalogRepository partCatalogRepository;
+
+    @Autowired
+    private IVehicleRepository vehicleRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Override
     public Map<String, Object> predictFailurePatterns(String partNumber, String vehicleModel, Integer modelYear) {
@@ -210,5 +223,69 @@ public class AnalyticsService implements IAnalyticsService {
     @Override
     public boolean scheduleAnalyticsReport(String reportName, String frequency, List<String> recipients) {
         return true;
+    }
+
+    @Override
+    public Map<String, Object> getPartStatistics(Long oemId) {
+        Map<String, Object> result = new HashMap<>();
+
+        // Total parts count
+        String totalSql = "SELECT COUNT(*) FROM aoem.parts_catalog" + (oemId != null ? " WHERE oem_id = ?" : "");
+        Long totalParts = oemId != null
+                ? jdbcTemplate.queryForObject(totalSql, Long.class, oemId)
+                : jdbcTemplate.queryForObject(totalSql, Long.class);
+
+        // Active parts count
+        String activeSql = "SELECT COUNT(*) FROM aoem.parts_catalog WHERE is_active = true"
+                + (oemId != null ? " AND oem_id = ?" : "");
+        Long activeParts = oemId != null
+                ? jdbcTemplate.queryForObject(activeSql, Long.class, oemId)
+                : jdbcTemplate.queryForObject(activeSql, Long.class);
+
+        // Inactive parts count
+        Long inactiveParts = totalParts - activeParts;
+
+        // Parts by category
+        String categorySql = "SELECT category, COUNT(*) as count FROM aoem.parts_catalog"
+                + (oemId != null ? " WHERE oem_id = ?" : "")
+                + " GROUP BY category ORDER BY count DESC";
+        List<Map<String, Object>> partsByCategory = oemId != null
+                ? jdbcTemplate.queryForList(categorySql, oemId)
+                : jdbcTemplate.queryForList(categorySql);
+
+        result.put("totalParts", totalParts);
+        result.put("activeParts", activeParts);
+        result.put("inactiveParts", inactiveParts);
+        result.put("partsByCategory", partsByCategory);
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getVehicleStatistics(Long oemId) {
+        Map<String, Object> result = new HashMap<>();
+
+        // Total vehicles count
+        String totalSql = "SELECT COUNT(*) FROM aoem.vehicles"
+                + (oemId != null ? " WHERE oem_id = ?" : "");
+        Long totalVehicles = oemId != null
+                ? jdbcTemplate.queryForObject(totalSql, Long.class, oemId)
+                : jdbcTemplate.queryForObject(totalSql, Long.class);
+
+        // Vehicles by status (active, inactive, deleted)
+        String statusSql = "SELECT " +
+                "CASE WHEN status IS NULL THEN 'active' ELSE status END as status, " +
+                "COUNT(*) as count " +
+                "FROM aoem.vehicles" +
+                (oemId != null ? " WHERE oem_id = ?" : "") +
+                " GROUP BY status ORDER BY count DESC";
+        List<Map<String, Object>> vehiclesByStatus = oemId != null
+                ? jdbcTemplate.queryForList(statusSql, oemId)
+                : jdbcTemplate.queryForList(statusSql);
+
+        result.put("totalVehicles", totalVehicles);
+        result.put("vehiclesByStatus", vehiclesByStatus);
+
+        return result;
     }
 }

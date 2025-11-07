@@ -234,4 +234,30 @@ public class AnalyticsController {
             return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         }
     }
+
+    @GetMapping("/statistics/parts")
+    @Operation(summary = "Get Parts Statistics", description = "Get comprehensive statistics about parts catalog including total count, active/inactive parts, and breakdown by category.", parameters = {
+            @Parameter(name = "oemId", description = "Optional OEM ID to filter statistics. If not provided, returns statistics for all OEMs.", required = false, example = "1")
+    })
+    public ResponseEntity<?> getPartStatistics(@RequestParam(value = "oemId", required = false) Long oemId) {
+        try {
+            Map<String, Object> statistics = analyticsService.getPartStatistics(oemId);
+            return ResponseEntity.ok(statistics);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/statistics/vehicles")
+    @Operation(summary = "Get Vehicles Statistics", description = "Get comprehensive statistics about vehicles including total count, status breakdown (active/inactive/deleted), and distribution by model and year.", parameters = {
+            @Parameter(name = "oemId", description = "Optional OEM ID to filter statistics. If not provided, returns statistics for all OEMs.", required = false, example = "1")
+    })
+    public ResponseEntity<?> getVehicleStatistics(@RequestParam(value = "oemId", required = false) Long oemId) {
+        try {
+            Map<String, Object> statistics = analyticsService.getVehicleStatistics(oemId);
+            return ResponseEntity.ok(statistics);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
 }

@@ -26,6 +26,7 @@ public class PartCatalogService implements IPartCatalogService {
         part.setPartNumber(request.getPartNumber());
         part.setName(request.getName());
         part.setCategory(request.getCategory() != null ? request.getCategory().name() : null);
+        part.setIsActive(true); // Default to active
 
         if (request.getImage() != null) {
             part.setImage(request.getImage());
@@ -156,14 +157,21 @@ public class PartCatalogService implements IPartCatalogService {
         Optional<PartCatalog> opt = partRepository.findById(partId);
         if (opt.isEmpty())
             return false;
-        // No isActive in schema; keep as-is
-        partRepository.save(opt.get());
+        PartCatalog part = opt.get();
+        part.setIsActive(true);
+        partRepository.save(part);
         return true;
     }
 
     @Override
     public boolean deactivatePart(Long partId) {
-        return softDeletePart(partId);
+        Optional<PartCatalog> opt = partRepository.findById(partId);
+        if (opt.isEmpty())
+            return false;
+        PartCatalog part = opt.get();
+        part.setIsActive(false);
+        partRepository.save(part);
+        return true;
     }
 
     private void validateCreateRequest(PartCatalogCreateRequest request) {
@@ -182,6 +190,8 @@ public class PartCatalogService implements IPartCatalogService {
         res.setCategory(
                 part.getCategory() != null ? org.example.models.enums.PartCategory.valueOf(part.getCategory()) : null);
         res.setImage(part.getImage());
+        res.setIsActive(part.getIsActive());
+        res.setCreatedAt(part.getCreatedAt());
         PartData pd = deserializePartData(part.getPart_data());
         if (pd != null) {
             res.setDescription(pd.getDescription());

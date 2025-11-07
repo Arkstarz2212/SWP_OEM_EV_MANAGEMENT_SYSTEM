@@ -92,4 +92,9 @@ public interface IAnalyticsService {
     Map<String, Object> createAnalyticsDashboard(String dashboardName, List<Map<String, Object>> widgets);
 
     boolean scheduleAnalyticsReport(String reportName, String frequency, List<String> recipients);
+
+    // Inventory Statistics
+    Map<String, Object> getPartStatistics(Long oemId);
+
+    Map<String, Object> getVehicleStatistics(Long oemId);
 }

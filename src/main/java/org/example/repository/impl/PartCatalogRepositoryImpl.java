@@ -32,30 +32,47 @@ public class PartCatalogRepositoryImpl implements IPartCatalogRepository {
             p.setImage(rs.getString("image"));
         } catch (Exception ignored) {
         }
+        try {
+            p.setIsActive(rs.getBoolean("is_active"));
+        } catch (Exception ignored) {
+        }
+        try {
+            var timestamp = rs.getTimestamp("created_at");
+            if (timestamp != null) {
+                p.setCreatedAt(timestamp.toInstant().atOffset(java.time.ZoneOffset.UTC));
+            }
+        } catch (Exception ignored) {
+        }
         return p;
     };
 
     @Override
     public PartCatalog save(PartCatalog partCatalog) {
         if (partCatalog.getId() == null) {
-            String sql = "INSERT INTO aoem.parts_catalog (oem_id, part_number, name, category, image, part_data) VALUES (?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO aoem.parts_catalog (oem_id, part_number, name, category, image, part_data, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW()) RETURNING id, created_at, is_active";
             KeyHolder keyHolder = new GeneratedKeyHolder();
             jdbcTemplate.update(conn -> {
-                var ps = conn.prepareStatement(sql, new String[] { "id" });
+                var ps = conn.prepareStatement(sql, new String[] { "id", "created_at", "is_active" });
                 ps.setLong(1, partCatalog.getOemId());
                 ps.setString(2, partCatalog.getPartNumber());
                 ps.setString(3, partCatalog.getName());
                 ps.setString(4, partCatalog.getCategory());
                 ps.setString(5, partCatalog.getImage());
                 ps.setString(6, partCatalog.getPart_data());
+                ps.setBoolean(7, partCatalog.getIsActive() != null ? partCatalog.getIsActive() : true);
                 return ps;
             }, keyHolder);
-            if (keyHolder.getKey() != null) {
-                partCatalog.setId(keyHolder.getKey().longValue());
+            if (keyHolder.getKeys() != null) {
+                partCatalog.setId(((Number) keyHolder.getKeys().get("id")).longValue());
+                var timestamp = (java.sql.Timestamp) keyHolder.getKeys().get("created_at");
+                if (timestamp != null) {
+                    partCatalog.setCreatedAt(timestamp.toInstant().atOffset(java.time.ZoneOffset.UTC));
+                }
+                partCatalog.setIsActive((Boolean) keyHolder.getKeys().get("is_active"));
             }
             return partCatalog;
         } else {
-            String sql = "UPDATE aoem.parts_catalog SET oem_id=?, part_number=?, name=?, category=?, image=?, part_data=? WHERE id=?";
+            String sql = "UPDATE aoem.parts_catalog SET oem_id=?, part_number=?, name=?, category=?, image=?, part_data=?, is_active=? WHERE id=?";
             jdbcTemplate.update(sql,
                     partCatalog.getOemId(),
                     partCatalog.getPartNumber(),
@@ -63,6 +80,7 @@ public class PartCatalogRepositoryImpl implements IPartCatalogRepository {
                     partCatalog.getCategory(),
                     partCatalog.getImage(),
                     partCatalog.getPart_data(),
+                    partCatalog.getIsActive(),
                     partCatalog.getId());
             return partCatalog;
         }
@@ -160,17 +178,18 @@ public class PartCatalogRepositoryImpl implements IPartCatalogRepository {
 
     @Override
     public List<PartCatalog> findByIsActive(Boolean isActive) {
-        return findAll();
+        return jdbcTemplate.query("SELECT * FROM aoem.parts_catalog WHERE is_active=?", mapper, isActive);
     }
 
     @Override
     public List<PartCatalog> findActiveParts() {
-        return findAll();
+        return jdbcTemplate.query("SELECT * FROM aoem.parts_catalog WHERE is_active=true", mapper);
     }
 
     @Override
     public List<PartCatalog> findByIsActiveAndCategory(Boolean isActive, PartCategory category) {
-        return findByCategory(category);
+        return jdbcTemplate.query("SELECT * FROM aoem.parts_catalog WHERE is_active=? AND category=?", mapper, isActive,
+                category.name());
     }
 
     @Override
@@ -190,7 +209,8 @@ public class PartCatalogRepositoryImpl implements IPartCatalogRepository {
 
     @Override
     public Long countByIsActive(Boolean isActive) {
-        Long cnt = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM aoem.parts_catalog", Long.class);
+        Long cnt = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM aoem.parts_catalog WHERE is_active=?", Long.class,
+                isActive);
         return cnt == null ? 0L : cnt;
     }
 

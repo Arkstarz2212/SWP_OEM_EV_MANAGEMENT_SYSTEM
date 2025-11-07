@@ -74,7 +74,9 @@ CREATE TABLE IF NOT EXISTS aoem.parts_catalog (
     name VARCHAR(200) NOT NULL,
     category VARCHAR(50) NOT NULL,
     image TEXT NULL,
-    part_data TEXT NULL  -- JSON
+    part_data TEXT NULL,  -- JSON
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- ============================================================================
