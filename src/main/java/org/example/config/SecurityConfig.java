@@ -154,7 +154,7 @@ public class SecurityConfig {
                                                 .hasAnyRole("Admin", "SC_Staff", "SC_Technician", "EVM_Staff")
                                                 .requestMatchers(org.springframework.http.HttpMethod.POST,
                                                                 "/api/warranty-policies/**")
-                                                .hasRole("EVM_Staff")
+                                                .hasAnyRole("Admin", "EVM_Staff")
                                                 .requestMatchers(org.springframework.http.HttpMethod.PUT,
                                                                 "/api/warranty-policies/**")
                                                 .hasRole("EVM_Staff")

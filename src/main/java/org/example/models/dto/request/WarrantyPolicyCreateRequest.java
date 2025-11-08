@@ -1,10 +1,23 @@
 package org.example.models.dto.request;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 public class WarrantyPolicyCreateRequest {
+    @NotBlank(message = "Model is required")
     private String model;
+
+    @NotBlank(message = "Component category is required")
     private String componentCategory;
+
+    @NotNull(message = "Months coverage is required")
+    @Min(value = 1, message = "Months coverage must be at least 1")
     private Integer monthsCoverage;
+
+    @Min(value = 0, message = "Km coverage cannot be negative")
     private Integer kmCoverage;
+
     private String notes;
 
     // Constructors
@@ -60,6 +73,7 @@ public class WarrantyPolicyCreateRequest {
         this.notes = notes;
     }
 
+    @Override
     public String toString() {
         return "WarrantyPolicyCreateRequest{" +
                 "model='" + model + '\'' +

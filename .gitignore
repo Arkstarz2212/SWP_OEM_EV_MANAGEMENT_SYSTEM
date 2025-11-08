@@ -71,3 +71,4 @@ jspm_packages/
 .eslintcache
 # Optional REPL history
 .node_repl_history
+.github/

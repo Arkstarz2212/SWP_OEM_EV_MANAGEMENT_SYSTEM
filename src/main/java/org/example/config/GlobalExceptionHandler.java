@@ -107,8 +107,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(
             Exception ex, HttpServletRequest request) {
-        ApiErrorResponse error = ApiErrorResponse.internalServerError(
-                "An unexpected error occurred: " + ex.getMessage(), request.getRequestURI());
+        StringBuilder msg = new StringBuilder("An unexpected error occurred: ").append(ex.getMessage());
+        Throwable cause = ex.getCause();
+        if (cause != null && cause.getMessage() != null) {
+            msg.append(" | cause: ").append(cause.getMessage());
+        }
+        ApiErrorResponse error = ApiErrorResponse.internalServerError(msg.toString(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    @ExceptionHandler(org.springframework.jdbc.BadSqlGrammarException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadSql(
+            org.springframework.jdbc.BadSqlGrammarException ex, HttpServletRequest request) {
+        StringBuilder msg = new StringBuilder("Bad SQL grammar: ").append(ex.getMessage());
+        Throwable cause = ex.getCause();
+        if (cause != null && cause.getMessage() != null) {
+            msg.append(" | cause: ").append(cause.getMessage());
+        }
+        ApiErrorResponse error = ApiErrorResponse.internalServerError(msg.toString(), request.getRequestURI());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 

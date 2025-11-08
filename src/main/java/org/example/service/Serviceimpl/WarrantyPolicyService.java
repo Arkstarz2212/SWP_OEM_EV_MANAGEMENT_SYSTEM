@@ -28,34 +28,52 @@ public class WarrantyPolicyService implements IWarrantyPolicyService {
 
     @Override
     public WarrantyPolicyResponse createWarrantyPolicy(WarrantyPolicyCreateRequest request, Long oemId) {
+        // Validate input parameters
+        if (request == null) {
+            throw new IllegalArgumentException("Request cannot be null");
+        }
+        if (request.getModel() == null || request.getModel().trim().isEmpty()) {
+            throw new IllegalArgumentException("Model cannot be null or empty");
+        }
+        if (request.getComponentCategory() == null || request.getComponentCategory().trim().isEmpty()) {
+            throw new IllegalArgumentException("Component category cannot be null or empty");
+        }
+        if (request.getMonthsCoverage() == null || request.getMonthsCoverage() <= 0) {
+            throw new IllegalArgumentException("Months coverage must be greater than 0");
+        }
+        if (request.getKmCoverage() != null && request.getKmCoverage() < 0) {
+            throw new IllegalArgumentException("Km coverage cannot be negative");
+        }
+        if (oemId == null) {
+            throw new IllegalArgumentException("OEM ID cannot be null");
+        }
+
         // Validate policy code uniqueness
-        if (warrantyPolicyRepository.existsByPolicyCode(request.getModel() + "_" + request.getComponentCategory())) {
-            throw new IllegalArgumentException("Policy code already exists");
+        String policyCode = request.getModel().trim() + "_" + request.getComponentCategory().trim();
+        if (warrantyPolicyRepository.existsByPolicyCode(policyCode)) {
+            throw new IllegalArgumentException("Policy code already exists: " + policyCode);
         }
 
         // Create new warranty policy
         WarrantyPolicy policy = new WarrantyPolicy();
         policy.setOemId(oemId);
-        policy.setPolicyName(request.getModel() + " - " + request.getComponentCategory());
-        policy.setPolicyCode(request.getModel() + "_" + request.getComponentCategory());
+        policy.setPolicyName(request.getModel().trim() + " - " + request.getComponentCategory().trim());
+        policy.setPolicyCode(policyCode);
 
         // Map to database fields
         policy.setWarrantyPeriodMonths(request.getMonthsCoverage());
-        policy.setWarrantyKmLimit(request.getKmCoverage());
+        // 0 or null means unlimited km coverage
+        policy.setWarrantyKmLimit(
+                request.getKmCoverage() == null || request.getKmCoverage() == 0 ? null : request.getKmCoverage());
 
-        // Set coverage details as JSON
-        String category = request.getComponentCategory().toLowerCase();
-        String coverageJson = String.format("""
-                {
-                    "%s": {
-                        "months": %d,
-                        "km": %d,
-                        "service_coverage": "free",
-                        "parts_coverage": "free",
-                        "conditions": ["normal_use"]
-                    }
-                }
-                """, category, request.getMonthsCoverage(), request.getKmCoverage());
+        // Set coverage details as JSON (compact format, no pretty-printing)
+        String category = request.getComponentCategory().trim().toLowerCase();
+        String kmJson = (request.getKmCoverage() == null || request.getKmCoverage() == 0)
+                ? ""
+                : "\"km\": " + request.getKmCoverage() + ",";
+        String coverageJson = String.format(
+                "{\"%s\":{\"months\":%d,%s\"service_coverage\":\"free\",\"parts_coverage\":\"free\",\"conditions\":[\"normal_use\"]}}",
+                category, request.getMonthsCoverage(), kmJson);
         policy.setCoverageDetails(coverageJson);
 
         policy.setIsActive(true);

@@ -53,7 +53,8 @@ public class WarrantyPoliciesController {
             ApiErrorResponse error = ApiErrorResponse.badRequest(e.getMessage(), "/api/warranty-policies");
             return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            ApiErrorResponse error = ApiErrorResponse.internalServerError("Failed to create warranty policy",
+            ApiErrorResponse error = ApiErrorResponse.internalServerError(
+                    "Failed to create warranty policy: " + e.getMessage(),
                     "/api/warranty-policies");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
