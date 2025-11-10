@@ -117,33 +117,71 @@ public class WarrantyPolicyRepositoryImpl implements IWarrantyPolicyRepository {
     public WarrantyPolicy save(WarrantyPolicy warrantyPolicy) {
         if (warrantyPolicy.getId() == null) {
             // Insert new policy
-            // Legacy-compatible INSERT (dbpost.sql columns)
-            String sql = """
-                    INSERT INTO aoem.warranty_policies
-                    (oem_id, policy_name, policy_code, warranty_months, warranty_km,
-                     is_active, is_default, effective_from, effective_to, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """;
+            // Try new schema first (with warranty_period_months, warranty_km_limit,
+            // coverage_details)
+            // Fallback to legacy schema (warranty_months, warranty_km) if needed
+            // Using RETURNING id for reliable ID retrieval (works across different database
+            // states)
+            String sql;
+            Long id;
 
-            jdbcTemplate.update(sql,
-                    warrantyPolicy.getOemId(),
-                    warrantyPolicy.getPolicyName(),
-                    warrantyPolicy.getPolicyCode(),
-                    warrantyPolicy.getWarrantyPeriodMonths(),
-                    // 0 or null -> NULL means unlimited
-                    (warrantyPolicy.getWarrantyKmLimit() == null || warrantyPolicy.getWarrantyKmLimit() == 0)
-                            ? null
-                            : warrantyPolicy.getWarrantyKmLimit(),
-                    Boolean.TRUE.equals(warrantyPolicy.getIsActive()),
-                    Boolean.TRUE.equals(warrantyPolicy.getIsDefault()),
-                    warrantyPolicy.getEffectiveFrom() == null ? java.time.LocalDate.now()
-                            : warrantyPolicy.getEffectiveFrom(),
-                    warrantyPolicy.getEffectiveTo(),
-                    java.time.LocalDateTime.now(),
-                    java.time.LocalDateTime.now());
+            // Check if new schema columns exist by trying the new schema first
+            try {
+                sql = """
+                        INSERT INTO aoem.warranty_policies
+                        (oem_id, policy_name, policy_code, warranty_period_months, warranty_km_limit, coverage_details,
+                         is_active, is_default, effective_from, effective_to, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        RETURNING id
+                        """;
 
-            // Get the generated ID
-            Long id = jdbcTemplate.queryForObject("SELECT LASTVAL()", Long.class);
+                id = jdbcTemplate.queryForObject(sql,
+                        Long.class,
+                        warrantyPolicy.getOemId(),
+                        warrantyPolicy.getPolicyName(),
+                        warrantyPolicy.getPolicyCode(),
+                        warrantyPolicy.getWarrantyPeriodMonths(),
+                        // 0 or null -> NULL means unlimited
+                        (warrantyPolicy.getWarrantyKmLimit() == null || warrantyPolicy.getWarrantyKmLimit() == 0)
+                                ? null
+                                : warrantyPolicy.getWarrantyKmLimit(),
+                        warrantyPolicy.getCoverageDetails() != null ? warrantyPolicy.getCoverageDetails() : "{}",
+                        Boolean.TRUE.equals(warrantyPolicy.getIsActive()),
+                        Boolean.TRUE.equals(warrantyPolicy.getIsDefault()),
+                        warrantyPolicy.getEffectiveFrom() == null ? java.time.LocalDate.now()
+                                : warrantyPolicy.getEffectiveFrom(),
+                        warrantyPolicy.getEffectiveTo(),
+                        java.time.LocalDateTime.now(),
+                        java.time.LocalDateTime.now());
+            } catch (Exception e) {
+                // Fallback to legacy schema (warranty_months, warranty_km, no coverage_details)
+                sql = """
+                        INSERT INTO aoem.warranty_policies
+                        (oem_id, policy_name, policy_code, warranty_months, warranty_km,
+                         is_active, is_default, effective_from, effective_to, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        RETURNING id
+                        """;
+
+                id = jdbcTemplate.queryForObject(sql,
+                        Long.class,
+                        warrantyPolicy.getOemId(),
+                        warrantyPolicy.getPolicyName(),
+                        warrantyPolicy.getPolicyCode(),
+                        warrantyPolicy.getWarrantyPeriodMonths(),
+                        // 0 or null -> NULL means unlimited
+                        (warrantyPolicy.getWarrantyKmLimit() == null || warrantyPolicy.getWarrantyKmLimit() == 0)
+                                ? null
+                                : warrantyPolicy.getWarrantyKmLimit(),
+                        Boolean.TRUE.equals(warrantyPolicy.getIsActive()),
+                        Boolean.TRUE.equals(warrantyPolicy.getIsDefault()),
+                        warrantyPolicy.getEffectiveFrom() == null ? java.time.LocalDate.now()
+                                : warrantyPolicy.getEffectiveFrom(),
+                        warrantyPolicy.getEffectiveTo(),
+                        java.time.LocalDateTime.now(),
+                        java.time.LocalDateTime.now());
+            }
+
             warrantyPolicy.setId(id);
         } else {
             // Update existing policy
