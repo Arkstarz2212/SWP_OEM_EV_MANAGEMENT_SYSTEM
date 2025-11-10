@@ -45,8 +45,11 @@ public class WarrantyPoliciesController {
     })
     public ResponseEntity<?> createWarrantyPolicy(
             @Valid @RequestBody WarrantyPolicyCreateRequest request,
-            @RequestParam(defaultValue = "1") @Parameter(description = "OEM Manufacturer ID") Long oemId) {
+            @RequestParam(name = "oemId", required = false) @Parameter(description = "OEM Manufacturer ID") Long oemId,
+            @RequestParam(name = "arg1", required = false) Long arg1) {
         try {
+            // Support both oemId and legacy arg1; default to 1 if both missing
+            oemId = (oemId != null) ? oemId : (arg1 != null ? arg1 : 1L);
             WarrantyPolicyResponse response = warrantyPolicyService.createWarrantyPolicy(request, oemId);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
@@ -281,8 +284,11 @@ public class WarrantyPoliciesController {
     })
     public ResponseEntity<?> setDefaultPolicy(
             @PathVariable @Parameter(description = "Warranty Policy ID", required = true, example = "1") Long id,
-            @RequestParam(defaultValue = "1") @Parameter(description = "OEM Manufacturer ID") Long oemId) {
+            @RequestParam(name = "oemId", required = false) @Parameter(description = "OEM Manufacturer ID") Long oemId,
+            @RequestParam(name = "arg1", required = false) Long arg1) {
         try {
+            // Support both oemId and legacy arg1; default to 1 if both missing
+            oemId = (oemId != null) ? oemId : (arg1 != null ? arg1 : 1L);
             boolean success = warrantyPolicyService.setDefaultPolicy(id, oemId);
             if (success) {
                 return ResponseEntity.ok().build();
