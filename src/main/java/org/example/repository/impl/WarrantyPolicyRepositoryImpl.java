@@ -1,6 +1,6 @@
 package org.example.repository.impl;
 
-import java.sql.ResultSet;
+import java.sql.PreparedStatement;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -10,104 +10,103 @@ import org.example.repository.IRepository.IWarrantyPolicyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
-/**
- * Repository implementation for Warranty Policies
- * Maps to: aoem.warranty_policies table
- */
 @Repository
 public class WarrantyPolicyRepositoryImpl implements IWarrantyPolicyRepository {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private boolean hasColumn(ResultSet rs, String columnName) {
-        try {
-            java.sql.ResultSetMetaData meta = rs.getMetaData();
-            int count = meta.getColumnCount();
-            for (int i = 1; i <= count; i++) {
-                if (columnName.equalsIgnoreCase(meta.getColumnLabel(i))) {
-                    return true;
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return false;
-    }
-
-    private final RowMapper<WarrantyPolicy> rowMapper = (ResultSet rs, int rowNum) -> {
+    private final RowMapper<WarrantyPolicy> mapper = (rs, rowNum) -> {
         WarrantyPolicy policy = new WarrantyPolicy();
         policy.setId(rs.getLong("id"));
         policy.setOemId(rs.getLong("oem_id"));
-        policy.setPolicyCode(rs.getString("policy_code"));
         policy.setPolicyName(rs.getString("policy_name"));
-        if (hasColumn(rs, "description")) {
-            policy.setDescription(rs.getString("description"));
-        }
+        policy.setPolicyCode(rs.getString("policy_code"));
 
-        java.sql.Date effectiveFrom = rs.getDate("effective_from");
-        if (effectiveFrom != null) {
-            policy.setEffectiveFrom(effectiveFrom.toLocalDate());
-        }
-
-        java.sql.Date effectiveTo = rs.getDate("effective_to");
-        if (effectiveTo != null) {
-            policy.setEffectiveTo(effectiveTo.toLocalDate());
-        }
-
-        if (hasColumn(rs, "warranty_period_months")) {
-            Integer warrantyPeriodMonths = rs.getInt("warranty_period_months");
-            if (!rs.wasNull()) {
-                policy.setWarrantyPeriodMonths(warrantyPeriodMonths);
-            }
-        } else if (hasColumn(rs, "warranty_months")) {
+        // Map warranty period
+        try {
             Integer warrantyMonths = rs.getInt("warranty_months");
             if (!rs.wasNull()) {
                 policy.setWarrantyPeriodMonths(warrantyMonths);
             }
+        } catch (Exception ignored) {
         }
-
-        if (hasColumn(rs, "warranty_km_limit")) {
-            Integer warrantyKmLimit = rs.getInt("warranty_km_limit");
-            if (!rs.wasNull()) {
-                policy.setWarrantyKmLimit(warrantyKmLimit);
-            }
-        } else if (hasColumn(rs, "warranty_km")) {
+        try {
             Integer warrantyKm = rs.getInt("warranty_km");
             if (!rs.wasNull()) {
                 policy.setWarrantyKmLimit(warrantyKm);
             }
+        } catch (Exception ignored) {
         }
 
-        if (hasColumn(rs, "coverage_details")) {
-            policy.setCoverageDetails(rs.getString("coverage_details"));
+        // Map coverage details - we'll store as JSON string
+        // For now, map individual fields to legacy methods
+        try {
+            Integer batteryMonths = rs.getInt("battery_coverage_months");
+            Integer batteryKm = rs.getInt("battery_coverage_km");
+            Integer motorMonths = rs.getInt("motor_coverage_months");
+            Integer motorKm = rs.getInt("motor_coverage_km");
+            Integer inverterMonths = rs.getInt("inverter_coverage_months");
+            Integer inverterKm = rs.getInt("inverter_coverage_km");
+
+            // Build JSON coverage details
+            StringBuilder coverage = new StringBuilder();
+            coverage.append("{");
+            coverage.append("\"battery\":{\"months\":").append(batteryMonths != null ? batteryMonths : "null");
+            coverage.append(",\"km\":").append(batteryKm != null ? batteryKm : "null").append("},");
+            coverage.append("\"motor\":{\"months\":").append(motorMonths != null ? motorMonths : "null");
+            coverage.append(",\"km\":").append(motorKm != null ? motorKm : "null").append("},");
+            coverage.append("\"inverter\":{\"months\":").append(inverterMonths != null ? inverterMonths : "null");
+            coverage.append(",\"km\":").append(inverterKm != null ? inverterKm : "null").append("}");
+            coverage.append("}");
+            policy.setCoverageDetails(coverage.toString());
+        } catch (Exception ignored) {
         }
 
-        Boolean isActive = rs.getBoolean("is_active");
-        policy.setIsActive(rs.wasNull() ? false : isActive);
-
-        Boolean isDefault = rs.getBoolean("is_default");
-        policy.setIsDefault(rs.wasNull() ? false : isDefault);
-
-        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
-        if (createdAt != null) {
-            policy.setCreatedAt(createdAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
+        // Map status
+        try {
+            policy.setIsActive(rs.getBoolean("is_active"));
+        } catch (Exception ignored) {
+        }
+        try {
+            policy.setIsDefault(rs.getBoolean("is_default"));
+        } catch (Exception ignored) {
         }
 
-        if (hasColumn(rs, "created_by_user_id")) {
-            Long createdByUserId = rs.getLong("created_by_user_id");
-            policy.setCreatedByUserId(rs.wasNull() ? null : createdByUserId);
+        // Map effective dates
+        try {
+            java.sql.Date effectiveFrom = rs.getDate("effective_from");
+            if (effectiveFrom != null) {
+                policy.setEffectiveFrom(effectiveFrom.toLocalDate());
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            java.sql.Date effectiveTo = rs.getDate("effective_to");
+            if (effectiveTo != null) {
+                policy.setEffectiveTo(effectiveTo.toLocalDate());
+            }
+        } catch (Exception ignored) {
         }
 
-        java.sql.Timestamp updatedAt = rs.getTimestamp("updated_at");
-        if (updatedAt != null) {
-            policy.setUpdatedAt(updatedAt.toLocalDateTime().atOffset(java.time.ZoneOffset.UTC));
+        // Map timestamps
+        try {
+            var createdAt = rs.getTimestamp("created_at");
+            if (createdAt != null) {
+                policy.setCreatedAt(createdAt.toInstant().atOffset(java.time.ZoneOffset.UTC));
+            }
+        } catch (Exception ignored) {
         }
-
-        if (hasColumn(rs, "updated_by_user_id")) {
-            Long updatedByUserId = rs.getLong("updated_by_user_id");
-            policy.setUpdatedByUserId(rs.wasNull() ? null : updatedByUserId);
+        try {
+            var updatedAt = rs.getTimestamp("updated_at");
+            if (updatedAt != null) {
+                policy.setUpdatedAt(updatedAt.toInstant().atOffset(java.time.ZoneOffset.UTC));
+            }
+        } catch (Exception ignored) {
         }
 
         return policy;
@@ -116,332 +115,274 @@ public class WarrantyPolicyRepositoryImpl implements IWarrantyPolicyRepository {
     @Override
     public WarrantyPolicy save(WarrantyPolicy warrantyPolicy) {
         if (warrantyPolicy.getId() == null) {
-            // Insert new policy
-            // Try new schema first (with warranty_period_months, warranty_km_limit,
-            // coverage_details)
-            // Fallback to legacy schema (warranty_months, warranty_km) if needed
-            // Using RETURNING id for reliable ID retrieval (works across different database
-            // states)
-            String sql;
-            Long id;
+            // Insert
+            String sql = "INSERT INTO aoem.warranty_policies (oem_id, policy_name, policy_code, " +
+                    "warranty_months, warranty_km, " +
+                    "battery_coverage_months, battery_coverage_km, " +
+                    "motor_coverage_months, motor_coverage_km, " +
+                    "inverter_coverage_months, inverter_coverage_km, " +
+                    "is_active, is_default, effective_from, effective_to, created_at) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
 
-            // Check if new schema columns exist by trying the new schema first
-            try {
-                sql = """
-                        INSERT INTO aoem.warranty_policies
-                        (oem_id, policy_name, policy_code, warranty_period_months, warranty_km_limit, coverage_details,
-                         is_active, is_default, effective_from, effective_to, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        RETURNING id
-                        """;
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            jdbcTemplate.update(connection -> {
+                PreparedStatement ps = connection.prepareStatement(sql, new String[] { "id" });
+                ps.setLong(1, warrantyPolicy.getOemId());
+                ps.setString(2, warrantyPolicy.getPolicyName());
+                ps.setString(3, warrantyPolicy.getPolicyCode());
+                ps.setInt(4, warrantyPolicy.getWarrantyPeriodMonths() != null ? warrantyPolicy.getWarrantyPeriodMonths()
+                        : 36);
+                ps.setObject(5, warrantyPolicy.getWarrantyKmLimit());
 
-                id = jdbcTemplate.queryForObject(sql,
-                        Long.class,
-                        warrantyPolicy.getOemId(),
-                        warrantyPolicy.getPolicyName(),
-                        warrantyPolicy.getPolicyCode(),
-                        warrantyPolicy.getWarrantyPeriodMonths(),
-                        // 0 or null -> NULL means unlimited
-                        (warrantyPolicy.getWarrantyKmLimit() == null || warrantyPolicy.getWarrantyKmLimit() == 0)
-                                ? null
-                                : warrantyPolicy.getWarrantyKmLimit(),
-                        warrantyPolicy.getCoverageDetails() != null ? warrantyPolicy.getCoverageDetails() : "{}",
-                        Boolean.TRUE.equals(warrantyPolicy.getIsActive()),
-                        Boolean.TRUE.equals(warrantyPolicy.getIsDefault()),
-                        warrantyPolicy.getEffectiveFrom() == null ? java.time.LocalDate.now()
-                                : warrantyPolicy.getEffectiveFrom(),
-                        warrantyPolicy.getEffectiveTo(),
-                        java.time.LocalDateTime.now(),
-                        java.time.LocalDateTime.now());
-            } catch (Exception e) {
-                // Fallback to legacy schema (warranty_months, warranty_km, no coverage_details)
-                sql = """
-                        INSERT INTO aoem.warranty_policies
-                        (oem_id, policy_name, policy_code, warranty_months, warranty_km,
-                         is_active, is_default, effective_from, effective_to, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        RETURNING id
-                        """;
+                // Parse coverage details from JSON or use defaults
+                Integer batteryMonths = extractBatteryMonths(warrantyPolicy.getCoverageDetails());
+                Integer batteryKm = extractBatteryKm(warrantyPolicy.getCoverageDetails());
+                Integer motorMonths = extractMotorMonths(warrantyPolicy.getCoverageDetails());
+                Integer motorKm = extractMotorKm(warrantyPolicy.getCoverageDetails());
+                Integer inverterMonths = extractInverterMonths(warrantyPolicy.getCoverageDetails());
+                Integer inverterKm = extractInverterKm(warrantyPolicy.getCoverageDetails());
 
-                id = jdbcTemplate.queryForObject(sql,
-                        Long.class,
-                        warrantyPolicy.getOemId(),
-                        warrantyPolicy.getPolicyName(),
-                        warrantyPolicy.getPolicyCode(),
-                        warrantyPolicy.getWarrantyPeriodMonths(),
-                        // 0 or null -> NULL means unlimited
-                        (warrantyPolicy.getWarrantyKmLimit() == null || warrantyPolicy.getWarrantyKmLimit() == 0)
-                                ? null
-                                : warrantyPolicy.getWarrantyKmLimit(),
-                        Boolean.TRUE.equals(warrantyPolicy.getIsActive()),
-                        Boolean.TRUE.equals(warrantyPolicy.getIsDefault()),
-                        warrantyPolicy.getEffectiveFrom() == null ? java.time.LocalDate.now()
-                                : warrantyPolicy.getEffectiveFrom(),
-                        warrantyPolicy.getEffectiveTo(),
-                        java.time.LocalDateTime.now(),
-                        java.time.LocalDateTime.now());
+                ps.setInt(6, batteryMonths != null ? batteryMonths : 36);
+                ps.setObject(7, batteryKm);
+                ps.setInt(8, motorMonths != null ? motorMonths : 36);
+                ps.setObject(9, motorKm);
+                ps.setInt(10, inverterMonths != null ? inverterMonths : 24);
+                ps.setObject(11, inverterKm);
+
+                ps.setBoolean(12, warrantyPolicy.getIsActive() != null ? warrantyPolicy.getIsActive() : true);
+                ps.setBoolean(13, warrantyPolicy.getIsDefault() != null ? warrantyPolicy.getIsDefault() : false);
+                ps.setDate(14, warrantyPolicy.getEffectiveFrom() != null
+                        ? java.sql.Date.valueOf(warrantyPolicy.getEffectiveFrom())
+                        : java.sql.Date.valueOf(LocalDate.now()));
+                ps.setObject(15, warrantyPolicy.getEffectiveTo() != null
+                        ? java.sql.Date.valueOf(warrantyPolicy.getEffectiveTo())
+                        : null);
+                return ps;
+            }, keyHolder);
+
+            Number key = keyHolder.getKey();
+            if (key != null) {
+                warrantyPolicy.setId(key.longValue());
             }
-
-            warrantyPolicy.setId(id);
         } else {
-            // Update existing policy
-            String sql = """
-                    UPDATE aoem.warranty_policies SET
-                    oem_id = ?, policy_name = ?, policy_code = ?,
-                    warranty_months = ?, warranty_km = ?,
-                    is_active = ?, is_default = ?,
-                    effective_from = ?, effective_to = ?,
-                    updated_at = ?
-                    WHERE id = ?
-                    """;
+            // Update
+            String sql = "UPDATE aoem.warranty_policies SET " +
+                    "policy_name = ?, policy_code = ?, " +
+                    "warranty_months = ?, warranty_km = ?, " +
+                    "battery_coverage_months = ?, battery_coverage_km = ?, " +
+                    "motor_coverage_months = ?, motor_coverage_km = ?, " +
+                    "inverter_coverage_months = ?, inverter_coverage_km = ?, " +
+                    "is_active = ?, is_default = ?, " +
+                    "effective_from = ?, effective_to = ?, " +
+                    "updated_at = NOW() " +
+                    "WHERE id = ?";
+
+            // Parse coverage details
+            Integer batteryMonths = extractBatteryMonths(warrantyPolicy.getCoverageDetails());
+            Integer batteryKm = extractBatteryKm(warrantyPolicy.getCoverageDetails());
+            Integer motorMonths = extractMotorMonths(warrantyPolicy.getCoverageDetails());
+            Integer motorKm = extractMotorKm(warrantyPolicy.getCoverageDetails());
+            Integer inverterMonths = extractInverterMonths(warrantyPolicy.getCoverageDetails());
+            Integer inverterKm = extractInverterKm(warrantyPolicy.getCoverageDetails());
 
             jdbcTemplate.update(sql,
-                    warrantyPolicy.getOemId(),
                     warrantyPolicy.getPolicyName(),
                     warrantyPolicy.getPolicyCode(),
                     warrantyPolicy.getWarrantyPeriodMonths(),
-                    (warrantyPolicy.getWarrantyKmLimit() == null || warrantyPolicy.getWarrantyKmLimit() == 0)
-                            ? null
-                            : warrantyPolicy.getWarrantyKmLimit(),
-                    Boolean.TRUE.equals(warrantyPolicy.getIsActive()),
-                    Boolean.TRUE.equals(warrantyPolicy.getIsDefault()),
-                    warrantyPolicy.getEffectiveFrom(),
-                    warrantyPolicy.getEffectiveTo(),
-                    java.time.LocalDateTime.now(),
+                    warrantyPolicy.getWarrantyKmLimit(),
+                    batteryMonths,
+                    batteryKm,
+                    motorMonths,
+                    motorKm,
+                    inverterMonths,
+                    inverterKm,
+                    warrantyPolicy.getIsActive(),
+                    warrantyPolicy.getIsDefault(),
+                    warrantyPolicy.getEffectiveFrom() != null
+                            ? java.sql.Date.valueOf(warrantyPolicy.getEffectiveFrom())
+                            : java.sql.Date.valueOf(LocalDate.now()),
+                    warrantyPolicy.getEffectiveTo() != null
+                            ? java.sql.Date.valueOf(warrantyPolicy.getEffectiveTo())
+                            : null,
                     warrantyPolicy.getId());
         }
-
         return warrantyPolicy;
+    }
+
+    private Integer extractBatteryMonths(String coverageDetails) {
+        if (coverageDetails == null)
+            return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(coverageDetails);
+            if (node.has("battery") && node.get("battery").has("months")) {
+                return node.get("battery").get("months").asInt();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private Integer extractBatteryKm(String coverageDetails) {
+        if (coverageDetails == null)
+            return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(coverageDetails);
+            if (node.has("battery") && node.get("battery").has("km")) {
+                return node.get("battery").get("km").asInt();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private Integer extractMotorMonths(String coverageDetails) {
+        if (coverageDetails == null)
+            return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(coverageDetails);
+            if (node.has("motor") && node.get("motor").has("months")) {
+                return node.get("motor").get("months").asInt();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private Integer extractMotorKm(String coverageDetails) {
+        if (coverageDetails == null)
+            return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(coverageDetails);
+            if (node.has("motor") && node.get("motor").has("km")) {
+                return node.get("motor").get("km").asInt();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private Integer extractInverterMonths(String coverageDetails) {
+        if (coverageDetails == null)
+            return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(coverageDetails);
+            if (node.has("inverter") && node.get("inverter").has("months")) {
+                return node.get("inverter").get("months").asInt();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private Integer extractInverterKm(String coverageDetails) {
+        if (coverageDetails == null)
+            return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree(coverageDetails);
+            if (node.has("inverter") && node.get("inverter").has("km")) {
+                return node.get("inverter").get("km").asInt();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     @Override
     public Optional<WarrantyPolicy> findById(Long id) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE id = ?";
-        try {
-            WarrantyPolicy policy = jdbcTemplate.queryForObject(sql, rowMapper, id);
-            return Optional.ofNullable(policy);
-        } catch (Exception e) {
-            return Optional.empty();
-        }
+        List<WarrantyPolicy> list = jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_policies WHERE id = ?", mapper, id);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
     @Override
     public List<WarrantyPolicy> findAll() {
-        String sql = "SELECT * FROM aoem.warranty_policies ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper);
+        return jdbcTemplate.query("SELECT * FROM aoem.warranty_policies ORDER BY id DESC", mapper);
     }
 
     @Override
     public void deleteById(Long id) {
-        String sql = "DELETE FROM aoem.warranty_policies WHERE id = ?";
-        jdbcTemplate.update(sql, id);
+        jdbcTemplate.update("DELETE FROM aoem.warranty_policies WHERE id = ?", id);
     }
 
     @Override
     public boolean existsById(Long id) {
-        String sql = "SELECT COUNT(*) FROM aoem.warranty_policies WHERE id = ?";
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
-        return count != null && count > 0;
+        Long cnt = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM aoem.warranty_policies WHERE id = ?", Long.class, id);
+        return cnt != null && cnt > 0;
     }
 
     @Override
     public Optional<WarrantyPolicy> findByPolicyCode(String policyCode) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE policy_code = ?";
-        try {
-            WarrantyPolicy policy = jdbcTemplate.queryForObject(sql, rowMapper, policyCode);
-            return Optional.ofNullable(policy);
-        } catch (Exception e) {
-            return Optional.empty();
-        }
+        List<WarrantyPolicy> list = jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_policies WHERE policy_code = ?", mapper, policyCode);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
     @Override
     public boolean existsByPolicyCode(String policyCode) {
-        String sql = "SELECT COUNT(*) FROM aoem.warranty_policies WHERE policy_code = ?";
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, policyCode);
-        return count != null && count > 0;
+        Long cnt = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM aoem.warranty_policies WHERE policy_code = ?", Long.class, policyCode);
+        return cnt != null && cnt > 0;
     }
 
     @Override
     public List<WarrantyPolicy> findByOemId(Long oemId) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE oem_id = ? ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper, oemId);
+        return jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_policies WHERE oem_id = ? ORDER BY id DESC", mapper, oemId);
     }
 
     @Override
     public List<WarrantyPolicy> findByOemIdAndIsActive(Long oemId, Boolean isActive) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE oem_id = ? AND is_active = ? ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper, oemId, isActive);
-    }
-
-    @Override
-    public Long countByOemId(Long oemId) {
-        String sql = "SELECT COUNT(*) FROM aoem.warranty_policies WHERE oem_id = ?";
-        return jdbcTemplate.queryForObject(sql, Long.class, oemId);
+        return jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_policies WHERE oem_id = ? AND is_active = ? ORDER BY id DESC",
+                mapper, oemId, isActive);
     }
 
     @Override
     public List<WarrantyPolicy> findByIsActive(Boolean isActive) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE is_active = ? ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper, isActive);
+        return jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_policies WHERE is_active = ? ORDER BY id DESC", mapper, isActive);
     }
 
     @Override
-    public List<WarrantyPolicy> findAllActive() {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE is_active = true ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper);
+    public List<WarrantyPolicy> findActivePolicies() {
+        return jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_policies WHERE is_active = true ORDER BY id DESC", mapper);
     }
 
     @Override
-    public Long countByIsActive(Boolean isActive) {
-        String sql = "SELECT COUNT(*) FROM aoem.warranty_policies WHERE is_active = ?";
-        return jdbcTemplate.queryForObject(sql, Long.class, isActive);
-    }
-
-    @Override
-    public Optional<WarrantyPolicy> findByIsDefaultAndOemId(Boolean isDefault, Long oemId) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE is_default = ? AND oem_id = ?";
-        try {
-            WarrantyPolicy policy = jdbcTemplate.queryForObject(sql, rowMapper, isDefault, oemId);
-            return Optional.ofNullable(policy);
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByIsDefault(Boolean isDefault) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE is_default = ? ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper, isDefault);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByEffectiveFromBefore(LocalDate date) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE effective_from < ? ORDER BY effective_from DESC";
-        return jdbcTemplate.query(sql, rowMapper, date);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByEffectiveToAfter(LocalDate date) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE effective_to > ? ORDER BY effective_to ASC";
-        return jdbcTemplate.query(sql, rowMapper, date);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByEffectiveFromBetween(LocalDate startDate, LocalDate endDate) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE effective_from BETWEEN ? AND ? ORDER BY effective_from ASC";
-        return jdbcTemplate.query(sql, rowMapper, startDate, endDate);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByEffectiveToBetween(LocalDate startDate, LocalDate endDate) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE effective_to BETWEEN ? AND ? ORDER BY effective_to ASC";
-        return jdbcTemplate.query(sql, rowMapper, startDate, endDate);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findActivePoliciesForDate(LocalDate date) {
-        String sql = """
-                SELECT * FROM aoem.warranty_policies
-                WHERE is_active = true
-                AND effective_from <= ?
-                AND (effective_to IS NULL OR effective_to >= ?)
-                ORDER BY effective_from DESC
-                """;
-        return jdbcTemplate.query(sql, rowMapper, date, date);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findExpiringPolicies(LocalDate beforeDate) {
-        String sql = """
-                SELECT * FROM aoem.warranty_policies
-                WHERE is_active = true
-                AND effective_to IS NOT NULL
-                AND effective_to <= ?
-                ORDER BY effective_to ASC
-                """;
-        return jdbcTemplate.query(sql, rowMapper, beforeDate);
+    public Optional<WarrantyPolicy> findByOemIdAndIsDefault(Long oemId, Boolean isDefault) {
+        List<WarrantyPolicy> list = jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_policies WHERE oem_id = ? AND is_default = ?",
+                mapper, oemId, isDefault);
+        return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
     @Override
     public List<WarrantyPolicy> findByPolicyNameContainingIgnoreCase(String policyName) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE LOWER(policy_name) LIKE LOWER(?) ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper, "%" + policyName + "%");
+        String like = "%" + policyName + "%";
+        return jdbcTemplate.query(
+                "SELECT * FROM aoem.warranty_policies WHERE LOWER(policy_name) LIKE LOWER(?) ORDER BY id DESC",
+                mapper, like);
     }
 
     @Override
-    public List<WarrantyPolicy> searchPolicies(String keyword) {
-        String sql = """
-                SELECT * FROM aoem.warranty_policies
-                WHERE LOWER(policy_name) LIKE LOWER(?)
-                OR LOWER(policy_code) LIKE LOWER(?)
-                ORDER BY created_at DESC
-                """;
-        String searchTerm = "%" + keyword + "%";
-        return jdbcTemplate.query(sql, rowMapper, searchTerm, searchTerm);
+    public Long countByOemId(Long oemId) {
+        Long cnt = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM aoem.warranty_policies WHERE oem_id = ?", Long.class, oemId);
+        return cnt == null ? 0L : cnt;
     }
 
     @Override
-    public List<WarrantyPolicy> findByWarrantyMonthsGreaterThanEqual(Integer months) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE warranty_period_months >= ? ORDER BY warranty_period_months DESC";
-        return jdbcTemplate.query(sql, rowMapper, months);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByWarrantyKmGreaterThanEqual(Integer km) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE warranty_km_limit >= ? ORDER BY warranty_km_limit DESC";
-        return jdbcTemplate.query(sql, rowMapper, km);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByWarrantyMonthsBetween(Integer minMonths, Integer maxMonths) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE warranty_period_months BETWEEN ? AND ? ORDER BY warranty_period_months ASC";
-        return jdbcTemplate.query(sql, rowMapper, minMonths, maxMonths);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByWarrantyKmBetween(Integer minKm, Integer maxKm) {
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE warranty_km_limit BETWEEN ? AND ? ORDER BY warranty_km_limit ASC";
-        return jdbcTemplate.query(sql, rowMapper, minKm, maxKm);
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByBatteryCoverageMonthsGreaterThanEqual(Integer months) {
-        // This would require JSON parsing of coverage_details field
-        // For now, return empty list or implement JSON query
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE coverage_details::jsonb->'battery'->>'months' >= ? ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper, months.toString());
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByMotorCoverageMonthsGreaterThanEqual(Integer months) {
-        // This would require JSON parsing of coverage_details field
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE coverage_details::jsonb->'motor'->>'months' >= ? ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper, months.toString());
-    }
-
-    @Override
-    public List<WarrantyPolicy> findByInverterCoverageMonthsGreaterThanEqual(Integer months) {
-        // This would require JSON parsing of coverage_details field
-        String sql = "SELECT * FROM aoem.warranty_policies WHERE coverage_details::jsonb->'inverter'->>'months' >= ? ORDER BY created_at DESC";
-        return jdbcTemplate.query(sql, rowMapper, months.toString());
-    }
-
-    @Override
-    public Long countByOemIdAndIsActive(Long oemId, Boolean isActive) {
-        String sql = "SELECT COUNT(*) FROM aoem.warranty_policies WHERE oem_id = ? AND is_active = ?";
-        return jdbcTemplate.queryForObject(sql, Long.class, oemId, isActive);
-    }
-
-    @Override
-    public Double averageWarrantyMonthsByOem(Long oemId) {
-        String sql = "SELECT AVG(warranty_period_months) FROM aoem.warranty_policies WHERE oem_id = ?";
-        return jdbcTemplate.queryForObject(sql, Double.class, oemId);
-    }
-
-    @Override
-    public Double averageWarrantyKmByOem(Long oemId) {
-        String sql = "SELECT AVG(warranty_km_limit) FROM aoem.warranty_policies WHERE oem_id = ?";
-        return jdbcTemplate.queryForObject(sql, Double.class, oemId);
+    public Long countByIsActive(Boolean isActive) {
+        Long cnt = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM aoem.warranty_policies WHERE is_active = ?", Long.class, isActive);
+        return cnt == null ? 0L : cnt;
     }
 }

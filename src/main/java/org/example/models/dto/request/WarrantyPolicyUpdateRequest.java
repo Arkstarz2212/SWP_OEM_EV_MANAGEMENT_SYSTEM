@@ -1,22 +1,14 @@
 package org.example.models.dto.request;
 
+import jakarta.validation.constraints.Min;
+
 import java.time.LocalDate;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-
-public class WarrantyPolicyCreateRequest {
-    @NotNull(message = "OEM ID is required")
-    private Long oemId;
-
-    @NotBlank(message = "Policy name is required")
+public class WarrantyPolicyUpdateRequest {
     private String policyName;
 
-    @NotBlank(message = "Policy code is required")
     private String policyCode;
 
-    @NotNull(message = "Warranty months is required")
     @Min(value = 1, message = "Warranty months must be at least 1")
     private Integer warrantyMonths;
 
@@ -43,23 +35,17 @@ public class WarrantyPolicyCreateRequest {
 
     private Boolean isDefault;
 
+    private Boolean isActive;
+
     private LocalDate effectiveFrom;
 
     private LocalDate effectiveTo;
 
     // Constructors
-    public WarrantyPolicyCreateRequest() {
+    public WarrantyPolicyUpdateRequest() {
     }
 
     // Getters and Setters
-    public Long getOemId() {
-        return oemId;
-    }
-
-    public void setOemId(Long oemId) {
-        this.oemId = oemId;
-    }
-
     public String getPolicyName() {
         return policyName;
     }
@@ -148,6 +134,14 @@ public class WarrantyPolicyCreateRequest {
         this.isDefault = isDefault;
     }
 
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
+    }
+
     public LocalDate getEffectiveFrom() {
         return effectiveFrom;
     }
@@ -163,25 +157,5 @@ public class WarrantyPolicyCreateRequest {
     public void setEffectiveTo(LocalDate effectiveTo) {
         this.effectiveTo = effectiveTo;
     }
-
-    // Legacy methods for backward compatibility
-    public String getModel() {
-        return policyName != null && policyName.contains(" - ") ? policyName.split(" - ")[0] : null;
-    }
-
-    public String getComponentCategory() {
-        return policyName != null && policyName.contains(" - ") ? policyName.split(" - ")[1] : null;
-    }
-
-    public Integer getMonthsCoverage() {
-        return warrantyMonths;
-    }
-
-    public Integer getKmCoverage() {
-        return warrantyKm;
-    }
-
-    public String getNotes() {
-        return null;
-    }
 }
+

@@ -31,6 +31,8 @@ public interface IVehicleService {
 
     VehicleDetailResponse getVehicleById(Long vehicleId);
 
+    List<VehicleResponse> getAllVehicles();
+
     List<VehicleResponse> getVehiclesByOem(Long oemId);
 
     List<VehicleResponse> getVehiclesByCustomer(Long customerId);

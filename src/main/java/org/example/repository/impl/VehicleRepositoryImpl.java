@@ -150,12 +150,13 @@ public class VehicleRepositoryImpl implements IVehicleRepository {
     public List<Vehicle> findAll() {
         try {
             // Try to query with status column first
-            String sql = "SELECT * FROM aoem.vehicles WHERE status IS NULL OR status != 'deleted'";
+            // Get all vehicles except deleted ones (status = 'active', 'inactive', or NULL)
+            String sql = "SELECT * FROM aoem.vehicles WHERE (status IS NULL OR status != 'deleted') ORDER BY id DESC";
             return jdbcTemplate.query(sql, vehicleRowMapper);
         } catch (Exception e) {
             // If there's an error (e.g., status column doesn't exist),
             // fall back to basic query without status filtering
-            String sql = "SELECT * FROM aoem.vehicles";
+            String sql = "SELECT * FROM aoem.vehicles ORDER BY id DESC";
             return jdbcTemplate.query(sql, vehicleRowMapper);
         }
     }

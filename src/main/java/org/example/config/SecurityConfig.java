@@ -157,10 +157,10 @@ public class SecurityConfig {
                                                 .hasAnyRole("Admin", "EVM_Staff")
                                                 .requestMatchers(org.springframework.http.HttpMethod.PUT,
                                                                 "/api/warranty-policies/**")
-                                                .hasRole("EVM_Staff")
+                                                .hasAnyRole("Admin", "EVM_Staff")
                                                 .requestMatchers(org.springframework.http.HttpMethod.DELETE,
                                                                 "/api/warranty-policies/**")
-                                                .hasRole("EVM_Staff")
+                                                .hasAnyRole("Admin", "EVM_Staff")
                                                 // Parts catalog
                                                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                                                                 "/api/parts/**")

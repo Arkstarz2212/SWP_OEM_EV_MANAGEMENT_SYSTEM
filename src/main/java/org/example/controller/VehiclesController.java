@@ -360,12 +360,11 @@ public class VehiclesController {
             } else if (customerId != null) {
                 vehicles = vehicleService.getVehiclesByCustomer(customerId);
             } else if (status != null) {
-                vehicles = vehicleService.getVehiclesByStatus(status, 1L); // Default OEM ID
+                vehicles = vehicleService.getVehiclesByStatus(status, null); // Get all OEMs when status filter is used
             } else {
-                // Get all vehicles with pagination (this would need to be implemented in
-                // service)
-                // For now, we'll get vehicles by default OEM
-                vehicles = vehicleService.getVehiclesByOem(1L);
+                // Get all vehicles from all OEMs
+                // We need to get vehicles from all OEMs
+                vehicles = vehicleService.getAllVehicles();
             }
 
             // Apply pagination

@@ -275,6 +275,14 @@ public class VehicleService implements IVehicleService {
     }
 
     @Override
+    public List<VehicleResponse> getAllVehicles() {
+        List<Vehicle> vehicles = vehicleRepository.findAll();
+        return vehicles.stream()
+                .map(this::convertToVehicleResponse)
+                .toList();
+    }
+
+    @Override
     public List<VehicleResponse> getVehiclesByOem(Long oemId) {
         List<Vehicle> vehicles = vehicleRepository.findAll();
         return vehicles.stream()
