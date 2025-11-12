@@ -253,17 +253,20 @@ INSERT INTO aoem.roles (code, name, description) VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- 5. USERS
+-- Password hashes:
+-- password123 = 75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8=
+-- 123456 = jZae727K08KaOmKSgOaGzww/XVqGr/PKEgIMkjrcbJI=
 INSERT INTO aoem.users (email, password_hash, full_name, role, service_center_id, profile_data, auth_info, is_active) VALUES
-('admin@aoem.com', 'hashed_password_1', 'System Administrator', 'Admin', NULL, '{"phone":"0901-111-111","mfa_enabled":true}', '{"session_token":null,"last_login":null}', TRUE),
-('admin@aoem1.com', '6G94qKPK8LYNjnTllCqm2G3BUM08AzOK7yW30tfjrMc=', 'Test Administrator', 'Admin', NULL, '{"phone":"0901-111-111","mfa_enabled":true}', '{"session_token":null,"last_login":null}', TRUE),
+('admin@aoem.com', '75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8=', 'System Administrator', 'Admin', NULL, '{"phone":"0901-111-111","mfa_enabled":true}', '{"session_token":null,"last_login":null}', TRUE),
+('admin@aoem1.com', '75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8=', 'Test Administrator', 'Admin', NULL, '{"phone":"0901-111-111","mfa_enabled":true}', '{"session_token":null,"last_login":null}', TRUE),
 ('admin@example.com', '75K3eLr+dx6JJFuJ7LwIpEpOFmwGZZkRiB84PURz6U8=', 'Example Administrator', 'Admin', NULL, '{"phone":"0909-999-999","mfa_enabled":true}', '{"session_token":null,"last_login":null}', TRUE),
-('evm.staff1@vinfast.vn', 'hashed_password_2', 'Nguyen EVM Staff', 'EVM_Staff', NULL, '{"phone":"0902-222-222","department":"Warranty"}', '{"session_token":null,"last_login":null}', TRUE),
-('evm.staff2@byd.com', 'hashed_password_3', 'Li EVM Staff', 'EVM_Staff', NULL, '{"phone":"0903-333-333","department":"Technical"}', '{"session_token":null,"last_login":null}', TRUE),
-('sc.staff1@vinfast.vn', 'hashed_password_4', 'Tran SC Staff HN', 'SC_Staff', 1, '{"phone":"0904-444-444","shift":"morning"}', '{"session_token":null,"last_login":null}', TRUE),
-('sc.staff2@vinfast.vn', 'hashed_password_5', 'Le SC Staff HCM', 'SC_Staff', 2, '{"phone":"0905-555-555","shift":"afternoon"}', '{"session_token":null,"last_login":null}', TRUE),
-('tech1@vinfast.vn', 'hashed_password_6', 'Pham Technician HN', 'SC_Technician', 1, '{"phone":"0906-666-666","specialization":"battery,motor"}', '{"session_token":null,"last_login":null}', TRUE),
-('tech2@vinfast.vn', 'hashed_password_7', 'Vo Technician HCM', 'SC_Technician', 2, '{"phone":"0907-777-777","specialization":"inverter,bms"}', '{"session_token":null,"last_login":null}', TRUE),
-('customer1@gmail.com', 'hashed_password_8', 'Nguyen Van Customer', 'SC_Staff', NULL, '{"phone":"0908-888-888","address":"123 ABC Street, Hanoi"}', '{"session_token":null,"last_login":null}', TRUE)
+('evm.staff1@vinfast.vn', 'jZae727K08KaOmKSgOaGzww/XVqGr/PKEgIMkjrcbJI=', 'Nguyen EVM Staff', 'EVM_Staff', NULL, '{"phone":"0902-222-222","department":"Warranty"}', '{"session_token":null,"last_login":null}', TRUE),
+('evm.staff2@byd.com', 'jZae727K08KaOmKSgOaGzww/XVqGr/PKEgIMkjrcbJI=', 'Li EVM Staff', 'EVM_Staff', NULL, '{"phone":"0903-333-333","department":"Technical"}', '{"session_token":null,"last_login":null}', TRUE),
+('sc.staff1@vinfast.vn', 'jZae727K08KaOmKSgOaGzww/XVqGr/PKEgIMkjrcbJI=', 'Tran SC Staff HN', 'SC_Staff', 1, '{"phone":"0904-444-444","shift":"morning"}', '{"session_token":null,"last_login":null}', TRUE),
+('sc.staff2@vinfast.vn', 'jZae727K08KaOmKSgOaGzww/XVqGr/PKEgIMkjrcbJI=', 'Le SC Staff HCM', 'SC_Staff', 2, '{"phone":"0905-555-555","shift":"afternoon"}', '{"session_token":null,"last_login":null}', TRUE),
+('tech1@vinfast.vn', 'jZae727K08KaOmKSgOaGzww/XVqGr/PKEgIMkjrcbJI=', 'Pham Technician HN', 'SC_Technician', 1, '{"phone":"0906-666-666","specialization":"battery,motor"}', '{"session_token":null,"last_login":null}', TRUE),
+('tech2@vinfast.vn', 'jZae727K08KaOmKSgOaGzww/XVqGr/PKEgIMkjrcbJI=', 'Vo Technician HCM', 'SC_Technician', 2, '{"phone":"0907-777-777","specialization":"inverter,bms"}', '{"session_token":null,"last_login":null}', TRUE),
+('customer1@gmail.com', 'jZae727K08KaOmKSgOaGzww/XVqGr/PKEgIMkjrcbJI=', 'Nguyen Van Customer', 'SC_Staff', NULL, '{"phone":"0908-888-888","address":"123 ABC Street, Hanoi"}', '{"session_token":null,"last_login":null}', TRUE)
 ON CONFLICT (email) DO NOTHING;
 
 -- 6. VEHICLES
