@@ -7,6 +7,8 @@ import java.util.Map;
 
 import org.example.repository.IRepository.IPartCatalogRepository;
 import org.example.repository.IRepository.IVehicleRepository;
+import org.example.repository.IRepository.IWarrantyClaimRepository;
+import org.example.repository.IRepository.IWarrantyPolicyRepository;
 import org.example.service.IService.IAnalyticsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,6 +22,12 @@ public class AnalyticsService implements IAnalyticsService {
 
     @Autowired
     private IVehicleRepository vehicleRepository;
+
+    @Autowired
+    private IWarrantyClaimRepository warrantyClaimRepository;
+
+    @Autowired
+    private IWarrantyPolicyRepository warrantyPolicyRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -285,6 +293,75 @@ public class AnalyticsService implements IAnalyticsService {
 
         result.put("totalVehicles", totalVehicles);
         result.put("vehiclesByStatus", vehiclesByStatus);
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getClaimStatistics(Long oemId) {
+        Map<String, Object> result = new HashMap<>();
+
+        // Total claims count
+        String totalSql = "SELECT COUNT(*) FROM aoem.warranty_claims wc " +
+                "JOIN aoem.vehicles v ON wc.vehicle_id = v.id" +
+                (oemId != null ? " WHERE v.oem_id = ?" : "");
+        Long totalClaims = oemId != null
+                ? jdbcTemplate.queryForObject(totalSql, Long.class, oemId)
+                : jdbcTemplate.queryForObject(totalSql, Long.class);
+
+        // Claims by status
+        String statusSql = "SELECT wc.status, COUNT(*) as count " +
+                "FROM aoem.warranty_claims wc " +
+                "JOIN aoem.vehicles v ON wc.vehicle_id = v.id " +
+                (oemId != null ? "WHERE v.oem_id = ? " : "") +
+                "GROUP BY wc.status ORDER BY count DESC";
+        List<Map<String, Object>> claimsByStatus = oemId != null
+                ? jdbcTemplate.queryForList(statusSql, oemId)
+                : jdbcTemplate.queryForList(statusSql);
+
+        result.put("totalClaims", totalClaims);
+        result.put("claimsByStatus", claimsByStatus);
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getWarrantyPolicyStatistics(Long oemId) {
+        Map<String, Object> result = new HashMap<>();
+
+        // Total policies count
+        String totalSql = "SELECT COUNT(*) FROM aoem.warranty_policies"
+                + (oemId != null ? " WHERE oem_id = ?" : "");
+        Long totalPolicies = oemId != null
+                ? jdbcTemplate.queryForObject(totalSql, Long.class, oemId)
+                : jdbcTemplate.queryForObject(totalSql, Long.class);
+
+        // Active policies count
+        String activeSql = "SELECT COUNT(*) FROM aoem.warranty_policies WHERE is_active = true"
+                + (oemId != null ? " AND oem_id = ?" : "");
+        Long activePolicies = oemId != null
+                ? jdbcTemplate.queryForObject(activeSql, Long.class, oemId)
+                : jdbcTemplate.queryForObject(activeSql, Long.class);
+
+        // Inactive policies count
+        Long inactivePolicies = totalPolicies - activePolicies;
+
+        // Policies by OEM (if no oemId filter)
+        String oemSql = "SELECT oem_id, COUNT(*) as count FROM aoem.warranty_policies"
+                + (oemId != null ? " WHERE oem_id = ?" : "")
+                + " GROUP BY oem_id ORDER BY count DESC";
+        List<Map<String, Object>> policiesByOem = oemId != null
+                ? jdbcTemplate.queryForList(
+                        "SELECT oem_id, COUNT(*) as count FROM aoem.warranty_policies WHERE oem_id = ? GROUP BY oem_id",
+                        oemId)
+                : jdbcTemplate.queryForList(oemSql);
+
+        result.put("totalPolicies", totalPolicies);
+        result.put("activePolicies", activePolicies);
+        result.put("inactivePolicies", inactivePolicies);
+        if (!policiesByOem.isEmpty()) {
+            result.put("policiesByOem", policiesByOem);
+        }
 
         return result;
     }

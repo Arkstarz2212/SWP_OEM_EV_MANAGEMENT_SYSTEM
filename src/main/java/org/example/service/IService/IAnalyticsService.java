@@ -97,4 +97,8 @@ public interface IAnalyticsService {
     Map<String, Object> getPartStatistics(Long oemId);
 
     Map<String, Object> getVehicleStatistics(Long oemId);
+
+    Map<String, Object> getClaimStatistics(Long oemId);
+
+    Map<String, Object> getWarrantyPolicyStatistics(Long oemId);
 }
