@@ -13,6 +13,9 @@ public class CreateWarrantyClaimRequest {
     private String dtcCode;
     private Integer mileageKmAtClaim;
 
+    // Optional: Admin/EVM_Staff can specify service center via request body
+    private Long serviceCenterId;
+
     // Removed cost breakdown and arbitrary claimData per simplified schema
 
     // Constructors
@@ -50,6 +53,14 @@ public class CreateWarrantyClaimRequest {
 
     public void setMileageKmAtClaim(Integer mileageKmAtClaim) {
         this.mileageKmAtClaim = mileageKmAtClaim;
+    }
+
+    public Long getServiceCenterId() {
+        return serviceCenterId;
+    }
+
+    public void setServiceCenterId(Long serviceCenterId) {
+        this.serviceCenterId = serviceCenterId;
     }
 
     // No-op accessors retained intentionally removed

@@ -72,7 +72,7 @@ public class WarrantyClaimsController {
     }
 
     @PostMapping
-    @Operation(summary = "Create Draft Warranty Claim", description = "Create a new draft warranty claim for a vehicle. Roles: SC_Staff. The claim can be submitted later for processing.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Warranty claim creation data", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Claim Example", value = "{\"vehicleId\": 1, \"issueDescription\": \"Battery not holding charge\", \"dtcCode\": \"P0A80\", \"mileageKmAtClaim\": 15000}"))))
+    @Operation(summary = "Create Draft Warranty Claim", description = "Create a new draft warranty claim for a vehicle. Roles: Admin, EVM_Staff, SC_Staff. The claim can be submitted later for processing.", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Warranty claim creation data (Admin/EVM_Staff: include serviceCenterId if not in session)", required = true, content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Create Claim Example", value = "{\"vehicleId\": 1, \"issueDescription\": \"Battery not holding charge\", \"dtcCode\": \"P0A80\", \"mileageKmAtClaim\": 15000, \"serviceCenterId\": 1}"))))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Draft claim created successfully", content = @Content(schema = @Schema(implementation = WarrantyClaimDetailResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request data")
@@ -121,6 +121,15 @@ public class WarrantyClaimsController {
             Object scIdObj = session.get("serviceCenterId");
             if (scIdObj instanceof Number) {
                 serviceCenterId = ((Number) scIdObj).longValue();
+            }
+            // Allow Admin/EVM_Staff to provide serviceCenterId in request body when not
+            // present in session
+            if (serviceCenterId == null && (currentRole == UserRole.Admin || currentRole == UserRole.EVM_Staff)) {
+                serviceCenterId = body.getServiceCenterId();
+                if (serviceCenterId == null) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error", "serviceCenterId is required for Admin/EVM_Staff"));
+                }
             }
             if (serviceCenterId == null) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Missing serviceCenterId in session"));
